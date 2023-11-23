@@ -82,8 +82,8 @@ What I need to implement in order to start work on Celestial:
 
 Plan (for each step, make an example or two):
 - ~~Get the minimal example "working"~~
-- timing callbacks & render queue
-    - timing callbacks and queues are done on a per-window basis
+- ~~timing callbacks~~
+- render queue (well, start it anyway - its only command for now will be to clear the screen to a color)
 - multiple windows
 - textures (should be pretty easy)
 - meshes (don't forget to keep track of attributes and the mesh type) (only support triangles and quads for now)
@@ -93,4 +93,5 @@ Plan (for each step, make an example or two):
     - uniforms could get interesting but VRender's system is probably ok
 - loading assets
 - modifying loaded assets
-
+- At this point in the plan, VRender should have a similar set of features as VRender.
+- 

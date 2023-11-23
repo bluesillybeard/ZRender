@@ -5,7 +5,7 @@ const gl33 = @import("ZRenderImpl/ZRenderGL33.zig");
 // The front-facing API for ZRender.
 // None of the actual native implementation is here because otherwise this file would be like 100000 lines long
 
-//ZRender compile time settings
+/// ZRender compile time settings (these are like C macros)
 pub const ZRenderOptions = struct {};
 
 // OK I lied, the ACTUAL front facing API is here.

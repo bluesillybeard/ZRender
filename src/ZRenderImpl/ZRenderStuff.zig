@@ -12,14 +12,15 @@ pub const GraphicsAPI = enum {
 /// Every ZRender function (with a few exceptions) is called from the instance.
 /// I recomend either passing the instance through functions or making it a singleton.
 pub const Instance = struct {
-    // OOP LOL?
+    // Whoa. is this an object-oriented inferface in a non-oop language?
+    // Yes. yes it is. Isn't zig cool?
     vtable: *const ZRenderInstanceVTable,
     object: *anyopaque,
     
     //TODO: generate instance functions from vtable,
     // So adding functions is less work.
     // The ideal solution would be a function that takes the vtable type
-    // and turns it into a struct.
+    // and turns it into this struct.
 
     pub inline fn deinit(this: @This()) void {
         this.vtable.deinit(this);
