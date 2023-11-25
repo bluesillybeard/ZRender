@@ -79,7 +79,6 @@ pub const Window = opaque{};
 /// The render queue is given as an argument to instance functions.
 pub const RenderQueue = opaque{};
 
-
 pub const Color = struct {
     r: u8,
     g: u8,
@@ -93,7 +92,7 @@ var time: i64 = 0;
 fn debugSetupOnRender(instance: Instance, window: *Window, queue: *RenderQueue, delta: i64) void {
     _ = window;
     time += delta;
-    instance.clearToColor(queue, .{.r = 1, .g = 0, .b = 1, .a = 1});
+    instance.clearToColor(queue, .{.r = 255, .g = @intCast(@divFloor(time * 255, std.time.us_per_s) & 255), .b = 255, .a = 255});
 }
 pub const debug_setup = ZRenderSetup {
     .onRender = &debugSetupOnRender,
