@@ -38,8 +38,8 @@ pub const Instance = struct {
         this.vtable.runWindow(this, window);    
     }
 
-    pub inline fn clearToColor(this: @This(), window: *Window, color: Color) void {
-        this.vtable.clearToColor(this, window, color);
+    pub inline fn clearToColor(this: @This(), queue: *RenderQueue, color: Color) void {
+        this.vtable.clearToColor(this, queue, color);
     }
 };
 
@@ -48,7 +48,7 @@ pub const ZRenderInstanceVTable = struct {
     initWindow: *const fn(instance: Instance, settings: WindowSettings, setup: ZRenderSetup) ?*Window,
     deinitWindow: *const fn(instance: Instance, window: *Window) void,
     runWindow: *const fn(instance: Instance, window: *Window) void,
-    clearToColor: *const fn (instance: Instance, window: *Window, color: Color) void,
+    clearToColor: *const fn (instance: Instance, renderQueue: *RenderQueue, color: Color) void,
 
 };
 
@@ -57,7 +57,7 @@ pub const ZRenderInstanceVTable = struct {
 pub const ZRenderSetup = struct {
     /// function callback for each frame.
     /// Delta is in micro seconds
-    onRender: *const fn(instance: Instance, window: *Window, delta: i64) void,
+    onRender: *const fn(instance: Instance, window: *Window, queue: *RenderQueue, delta: i64) void,
 };
 
 pub const WindowSettings = struct {
@@ -75,6 +75,11 @@ pub const WindowSettings = struct {
 /// and the instance can treat the window as any object with the size of a pointer.
 pub const Window = opaque{};
 
+/// The actual render queue is implemented by the instance.
+/// The render queue is given as an argument to instance functions.
+pub const RenderQueue = opaque{};
+
+
 pub const Color = struct {
     r: u8,
     g: u8,
@@ -85,9 +90,10 @@ pub const Color = struct {
 // a pre-made setup for the hello world example
 // TODO: setup custom data
 var time: i64 = 0;
-fn debugSetupOnRender(instance: Instance, window: *Window, delta: i64) void {
+fn debugSetupOnRender(instance: Instance, window: *Window, queue: *RenderQueue, delta: i64) void {
+    _ = window;
     time += delta;
-    instance.clearToColor(window, .{.r = 1, .g = 0, .b = 1, .a = 1});
+    instance.clearToColor(queue, .{.r = 1, .g = 0, .b = 1, .a = 1});
 }
 pub const debug_setup = ZRenderSetup {
     .onRender = &debugSetupOnRender,
