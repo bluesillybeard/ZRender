@@ -57,7 +57,7 @@ pub const ZRenderInstanceVTable = struct {
 pub const ZRenderSetup = struct {
     /// function callback for each frame.
     /// Delta is in micro seconds
-    onRender: *const fn(instance: Instance, window: *Window, queue: *RenderQueue, delta: i64) void,
+    onRender: *const fn(instance: Instance, window: *Window, queue: *RenderQueue, delta: i64, time: i64) void,
 };
 
 pub const WindowSettings = struct {
@@ -87,12 +87,10 @@ pub const Color = struct {
 };
 
 // a pre-made setup for the hello world example
-// TODO: setup custom data
-var time: i64 = 0;
-fn debugSetupOnRender(instance: Instance, window: *Window, queue: *RenderQueue, delta: i64) void {
+fn debugSetupOnRender(instance: Instance, window: *Window, queue: *RenderQueue, delta: i64, time: i64) void {
+    _ = delta;
     _ = window;
-    time += delta;
-    instance.clearToColor(queue, .{.r = 255, .g = @intCast(@divFloor(time * 255, std.time.us_per_s) & 255), .b = 255, .a = 255});
+    instance.clearToColor(queue, .{.r = 255, .g = @intCast(@divFloor(time * 255, std.time.us_per_s * 10) & 255), .b = 255, .a = 255});
 }
 pub const debug_setup = ZRenderSetup {
     .onRender = &debugSetupOnRender,

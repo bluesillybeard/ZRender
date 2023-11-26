@@ -7,25 +7,29 @@ const ZRender = @import("zrender").ZRender(.{});
 const std = @import("std");
 const alloc = std.heap.GeneralPurposeAllocator(.{});
 
+const numWindows = 20;
+
 pub fn main() !void {
-    std.debug.print("This is the windows example!", .{});
     var allocatorObj = alloc{};
     var allocator = allocatorObj.allocator();
     // create an instance with default parameters
     var instance = try ZRender.init(allocator);
     defer instance.deinit();
-    // create a window with default settings and debug setup
-    var window1 = instance.initWindow(.{
-            .name = "Window number 1",
-        },
-        ZRender.debug_setup).?;
-    defer instance.deinitWindow(window1);
-    // create another window with default settings and debug setup
-    var window2 = instance.initWindow(.{
-            .name = "Window number 2",
-        },
-        ZRender.debug_setup).?;
-    defer instance.deinitWindow(window2);
-    // Run the window. This also ends the window's lifetime since it's intended to be the last function run on a default window.
+    // create a bunch of windows
+    var windows = std.ArrayList(*ZRender.Window).init(allocator);
+    inline for(0..numWindows) |index| {
+        var indexStrBuffer: [100:0] u8 = undefined;
+        const name = try std.fmt.bufPrint(&indexStrBuffer, "Window number {d}", .{index});
+        indexStrBuffer[name.len] = 0;
+        const window = instance.initWindow(.{
+            .name =  &indexStrBuffer,
+        }, ZRender.debug_setup) orelse @panic("Could not create window");
+        windows.append(window) catch unreachable;
+    }
+    defer {
+        for(windows.items) |window| {
+            instance.deinitWindow(window);
+        }
+    }
     instance.run();
 }

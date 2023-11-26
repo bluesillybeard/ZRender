@@ -104,20 +104,23 @@ const ZRenderGL33Instance = struct {
                 }
             }
             currentFrameTime = std.time.microTimestamp();
+            const delta = currentFrameTime - lastFrameTime;
             // TODO: handle when windows are added or removed during the main loop
             // An easy way to do this would be to keep track of a list of window changes
             // (with instance.initWindow and instance.deinitWindow)
             // then iterate that list after the windows are all iterated.
             for(this.windows.items) |window| {
-                window.setup.onRender(instance, @ptrCast(window), @ptrCast(&window.queue), currentFrameTime - lastFrameTime);
+                window.setup.onRender(instance, @ptrCast(window), @ptrCast(&window.queue), delta, currentFrameTime);
                 // TODO: actually run the queue asynchronously
 
                 // TODO: verify that this function actually flushes the OpenGL command queue
                 sdl.gl.makeCurrent(this.context.?, window.sdlWindow) catch @panic("Failed to make window current!");
                 window.queue.run();
-                lastFrameTime = currentFrameTime;
+                // Not sure why, but I have to set the vsync EVERY frame, or else it won't work correctly
+                sdl.gl.setSwapInterval(.adaptive_vsync) catch unreachable;
                 sdl.gl.swapWindow(window.sdlWindow);
             }
+            lastFrameTime = currentFrameTime;
         }
     }
 

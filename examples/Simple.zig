@@ -16,6 +16,5 @@ pub fn main() !void {
     // create a window with default settings and debug setup
     var window = instance.initWindow(.{}, ZRender.debug_setup).?;
     defer instance.deinitWindow(window);
-    // Run the program. When run() exits, it means that the program is done running.
     instance.run();
 }

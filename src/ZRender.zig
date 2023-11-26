@@ -23,5 +23,7 @@ pub fn ZRender(comptime options: ZRenderOptions) type {
         }
 
         pub const debug_setup = stuff.debug_setup;
+
+        pub const Window = stuff.Window;
     };
 }
