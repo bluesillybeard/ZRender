@@ -15,11 +15,17 @@ pub fn main() !void {
     var instance = try ZRender.init(allocator);
     defer instance.deinit();
     // create a window with default settings and debug setup
-    var window = instance.initWindow(.{
+    var window1 = instance.initWindow(.{
             .name = "Window number 1",
         },
         ZRender.debug_setup).?;
-    defer instance.deinitWindow(window);
+    defer instance.deinitWindow(window1);
+    // create another window with default settings and debug setup
+    var window2 = instance.initWindow(.{
+            .name = "Window number 2",
+        },
+        ZRender.debug_setup).?;
+    defer instance.deinitWindow(window2);
     // Run the window. This also ends the window's lifetime since it's intended to be the last function run on a default window.
     instance.run();
 }

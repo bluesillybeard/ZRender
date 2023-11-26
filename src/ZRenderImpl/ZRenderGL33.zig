@@ -49,15 +49,19 @@ const ZRenderGL33Instance = struct {
     }
     
     pub fn initWindow(instance: Instance, settings: stuff.WindowSettings, setup: stuff.ZRenderSetup) ?*Window {
-        // TODO: multiple windows
         var this: *@This() = @alignCast(@ptrCast(instance.object));
         var window = ZRenderGL33Window.init(this.allocator, settings, setup) catch |e| {
             std.io.getStdErr().writer().print("Error creating window: {s}", .{@errorName(e)}) catch return null;
             return null;
         };
         this.windows.append(window) catch return null;
+        // If there isn't already an initialized context, initialize it.
+        
+        // Because OpenGL is stupid and annoying, it HAS to be attached to a window,
+        // which is why it is initialized after the window, not before.
         if(this.context == null) {
             this.context = sdl.gl.createContext(window.sdlWindow) catch return null;
+            // TODO: test if this actually requires a context. It probably does but may as well test it.
             gl.load(void{}, loadProc) catch return null;
         }
         return @as(*Window, @ptrCast(window));
@@ -72,31 +76,48 @@ const ZRenderGL33Instance = struct {
                 break;
             }
         }
+        // If this was the last window, destroy the OpenGL context as well
+        if(this.windows.items.len == 0){
+            sdl.gl.deleteContext(this.context.?);
+        }
         window.sdlWindow.destroy();
     }
 
     pub fn run(instance: Instance) void {
         var this: *@This() = @alignCast(@ptrCast(instance.object));
-        // TODO: multiple windows
-        var window: *ZRenderGL33Window = this.windows.items[0];
         var lastFrameTime = std.time.microTimestamp();
         var currentFrameTime = lastFrameTime;
 
-        mainloop: while(true) { //windowShouldClose
-            // TODO: poll events once per frame
-            // instead of once per window per frame
+        mainloop: while(true) {
             while(sdl.pollEvent()) |event| {
                 switch (event) {
+                    // This is the event for if there is only one window
                     .quit => break :mainloop,
+                    // TODO: only quit the window that the event came from
+                    .window => |windowEvent| {
+                        switch (windowEvent.type) {
+                            .close => break :mainloop,
+                            else => {},
+                        }
+                    },
                     else => {},
                 }
             }
             currentFrameTime = std.time.microTimestamp();
-            window.setup.onRender(instance, @ptrCast(window), @ptrCast(&window.queue), currentFrameTime - lastFrameTime);
-            // TODO: actually run the queue asynchronously
-            window.queue.run();
-            lastFrameTime = currentFrameTime;
-            sdl.gl.swapWindow(window.sdlWindow);
+            // TODO: handle when windows are added or removed during the main loop
+            // An easy way to do this would be to keep track of a list of window changes
+            // (with instance.initWindow and instance.deinitWindow)
+            // then iterate that list after the windows are all iterated.
+            for(this.windows.items) |window| {
+                window.setup.onRender(instance, @ptrCast(window), @ptrCast(&window.queue), currentFrameTime - lastFrameTime);
+                // TODO: actually run the queue asynchronously
+
+                // TODO: verify that this function actually flushes the OpenGL command queue
+                sdl.gl.makeCurrent(this.context.?, window.sdlWindow) catch @panic("Failed to make window current!");
+                window.queue.run();
+                lastFrameTime = currentFrameTime;
+                sdl.gl.swapWindow(window.sdlWindow);
+            }
         }
     }
 
