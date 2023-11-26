@@ -1,7 +1,10 @@
 const std = @import("std");
 const stuff = @import("ZRenderStuff.zig");
 const gl = @import("ext/GL33Bind.zig");
-const glfw = @import("ext/zglfw.zig");
+const c = @cImport({
+    @cInclude("GL/glew.h");
+});
+const sdl = @import("sdl");
 
 // some 'static includes' because yeah
 const Instance = stuff.Instance;
@@ -9,15 +12,16 @@ const Window = stuff.Window;
 
 fn loadProc(ctx: void, name: [:0]const u8) ?gl.FunctionPointer {
     _ = ctx;
-    return glfw.getProcAddress(name);
+    return sdl.gl.getProcAddress(name);
 }
 
 pub fn initInstance(allocator: std.mem.Allocator) !Instance {
-    // Before we create the object, initialize GLFW.
-    try glfw.init();
+    
+    try sdl.init(.{.video = true});
     var obj = ZRenderGL33Instance{
         .allocator = allocator,
         .windows = std.ArrayList(*ZRenderGL33Window).init(allocator),
+        .context = null,
     };
     var object = try allocator.create(ZRenderGL33Instance);
     object.* = obj;
@@ -36,12 +40,12 @@ pub fn initInstance(allocator: std.mem.Allocator) !Instance {
 
 const ZRenderGL33Instance = struct {
     allocator: std.mem.Allocator,
+    context: ?sdl.gl.Context,
     windows: std.ArrayList(*ZRenderGL33Window),
 
     pub fn deinit(instance: Instance) void {
-        // There isn't a lot to deinit in OpenGL
-        // since the context is destroyed with the last window.
         _ = instance;
+        sdl.quit();
     }
     
     pub fn initWindow(instance: Instance, settings: stuff.WindowSettings, setup: stuff.ZRenderSetup) ?*Window {
@@ -52,6 +56,10 @@ const ZRenderGL33Instance = struct {
             return null;
         };
         this.windows.append(window) catch return null;
+        if(this.context == null) {
+            this.context = sdl.gl.createContext(window.sdlWindow) catch return null;
+            gl.load(void{}, loadProc) catch return null;
+        }
         return @as(*Window, @ptrCast(window));
     }
 
@@ -64,7 +72,7 @@ const ZRenderGL33Instance = struct {
                 break;
             }
         }
-        glfw.destroyWindow(window.glfwWindow);
+        window.sdlWindow.destroy();
     }
 
     pub fn run(instance: Instance) void {
@@ -73,16 +81,22 @@ const ZRenderGL33Instance = struct {
         var window: *ZRenderGL33Window = this.windows.items[0];
         var lastFrameTime = std.time.microTimestamp();
         var currentFrameTime = lastFrameTime;
-        while(!glfw.windowShouldClose(window.glfwWindow)) {
+
+        mainloop: while(true) { //windowShouldClose
             // TODO: poll events once per frame
             // instead of once per window per frame
-            glfw.pollEvents();
+            while(sdl.pollEvent()) |event| {
+                switch (event) {
+                    .quit => break :mainloop,
+                    else => {},
+                }
+            }
             currentFrameTime = std.time.microTimestamp();
             window.setup.onRender(instance, @ptrCast(window), @ptrCast(&window.queue), currentFrameTime - lastFrameTime);
             // TODO: actually run the queue asynchronously
             window.queue.run();
             lastFrameTime = currentFrameTime;
-            glfw.swapBuffers(window.glfwWindow);
+            sdl.gl.swapWindow(window.sdlWindow);
         }
     }
 
@@ -96,20 +110,20 @@ const ZRenderGL33Instance = struct {
 };
 
 const ZRenderGL33Window = struct {
-    glfwWindow: *glfw.Window,
+    sdlWindow: sdl.Window,
     setup: stuff.ZRenderSetup,
     queue: GL33RenderQueue,
 
     pub fn init(allocator: std.mem.Allocator, settings: stuff.WindowSettings, setup: stuff.ZRenderSetup) !*ZRenderGL33Window {
         const w = ZRenderGL33Window{
             // TODO: monitor
-            .glfwWindow = try glfw.createWindow(@as(c_int, @intCast(settings.width)), @as(c_int, @intCast(settings.height)), settings.name, null, null),
+            .sdlWindow = try sdl.createWindow(settings.name, .default, .default, @intCast(settings.width), @intCast(settings.height), .{
+                .resizable = settings.resizable,
+                .context = .opengl, 
+            }),
             .setup = setup,
             .queue = GL33RenderQueue.init(allocator),
         };
-        glfw.makeContextCurrent(w.glfwWindow);
-        // GLFW needs an OpenGL context to load procs for some reason so yeah
-        try gl.load(void{}, loadProc);
         var object = try allocator.create(ZRenderGL33Window);
         object.* = w;
         return object;
