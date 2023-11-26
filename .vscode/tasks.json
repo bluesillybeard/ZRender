@@ -11,5 +11,25 @@
                 "isDefault": true
             }
         },
+        {
+            "label": "buildsimple",
+            "type": "shell",
+            "command": "zig build simple",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "buildwindows",
+            "type": "shell",
+            "command": "zig build windows",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
     ]
 }

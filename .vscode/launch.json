@@ -7,9 +7,18 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Launch (debug)",
-            "preLaunchTask": "build",
+            "name": "Launch simple example (debug)",
+            "preLaunchTask": "buildsimple",
             "program": "${workspaceFolder}/zig-out/bin/simple",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Launch windows example (debug)",
+            "preLaunchTask": "buildwindows",
+            "program": "${workspaceFolder}/zig-out/bin/windows",
             "args": [],
             "cwd": "${workspaceFolder}"
         },

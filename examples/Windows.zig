@@ -8,14 +8,18 @@ const std = @import("std");
 const alloc = std.heap.GeneralPurposeAllocator(.{});
 
 pub fn main() !void {
+    std.debug.print("This is the windows example!", .{});
     var allocatorObj = alloc{};
     var allocator = allocatorObj.allocator();
     // create an instance with default parameters
     var instance = try ZRender.init(allocator);
     defer instance.deinit();
     // create a window with default settings and debug setup
-    var window = instance.initWindow(.{}, ZRender.debug_setup).?;
+    var window = instance.initWindow(.{
+            .name = "Window number 1",
+        },
+        ZRender.debug_setup).?;
     defer instance.deinitWindow(window);
     // Run the window. This also ends the window's lifetime since it's intended to be the last function run on a default window.
-    instance.runWindow(window);
+    instance.run();
 }

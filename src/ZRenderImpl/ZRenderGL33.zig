@@ -17,6 +17,7 @@ pub fn initInstance(allocator: std.mem.Allocator) !Instance {
     try glfw.init();
     var obj = ZRenderGL33Instance{
         .allocator = allocator,
+        .windows = std.ArrayList(*ZRenderGL33Window).init(allocator),
     };
     var object = try allocator.create(ZRenderGL33Instance);
     object.* = obj;
@@ -24,7 +25,7 @@ pub fn initInstance(allocator: std.mem.Allocator) !Instance {
         .deinit = &ZRenderGL33Instance.deinit,
         .initWindow = &ZRenderGL33Instance.initWindow,
         .deinitWindow = &ZRenderGL33Instance.deinitWindow,
-        .runWindow = &ZRenderGL33Instance.runWindow,
+        .run = &ZRenderGL33Instance.run,
         .clearToColor = &ZRenderGL33Instance.clearToColor,
     };
     return Instance {
@@ -35,6 +36,7 @@ pub fn initInstance(allocator: std.mem.Allocator) !Instance {
 
 const ZRenderGL33Instance = struct {
     allocator: std.mem.Allocator,
+    windows: std.ArrayList(*ZRenderGL33Window),
 
     pub fn deinit(instance: Instance) void {
         // There isn't a lot to deinit in OpenGL
@@ -49,19 +51,26 @@ const ZRenderGL33Instance = struct {
             std.io.getStdErr().writer().print("Error creating window: {s}", .{@errorName(e)}) catch return null;
             return null;
         };
+        this.windows.append(window) catch return null;
         return @as(*Window, @ptrCast(window));
     }
 
     pub fn deinitWindow(instance: Instance, window_uncast: *Window) void {
-        _ = instance;
+        var this: *ZRenderGL33Instance = @alignCast(@ptrCast(instance.object));
         var window: *ZRenderGL33Window = @alignCast(@ptrCast(window_uncast));
+        for(this.windows.items, 0..) |window_item, window_index| {
+            if(window_item == window) {
+                _ = this.windows.swapRemove(window_index);
+                break;
+            }
+        }
         glfw.destroyWindow(window.glfwWindow);
     }
 
-    // TODO: it might be worth replacing this with just 'run' that doesn't differentiate between windows.
-    pub fn runWindow(instance: Instance, window_uncast: *Window) void {
-        //var this: *@This() = @alignCast(@ptrCast(instance.object));
-        var window: *ZRenderGL33Window = @alignCast(@ptrCast(window_uncast));
+    pub fn run(instance: Instance) void {
+        var this: *@This() = @alignCast(@ptrCast(instance.object));
+        // TODO: multiple windows
+        var window: *ZRenderGL33Window = this.windows.items[0];
         var lastFrameTime = std.time.microTimestamp();
         var currentFrameTime = lastFrameTime;
         while(!glfw.windowShouldClose(window.glfwWindow)) {
@@ -69,7 +78,7 @@ const ZRenderGL33Instance = struct {
             // instead of once per window per frame
             glfw.pollEvents();
             currentFrameTime = std.time.microTimestamp();
-            window.setup.onRender(instance, window_uncast, @ptrCast(&window.queue), currentFrameTime - lastFrameTime);
+            window.setup.onRender(instance, @ptrCast(window), @ptrCast(&window.queue), currentFrameTime - lastFrameTime);
             // TODO: actually run the queue asynchronously
             window.queue.run();
             lastFrameTime = currentFrameTime;

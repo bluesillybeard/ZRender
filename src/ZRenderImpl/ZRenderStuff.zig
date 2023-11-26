@@ -34,8 +34,8 @@ pub const Instance = struct {
         this.vtable.deinitWindow(this, window);
     }
 
-    pub inline fn runWindow(this: @This(), window: *Window) void {
-        this.vtable.runWindow(this, window);    
+    pub inline fn run(this: @This()) void {
+        this.vtable.run(this);    
     }
 
     pub inline fn clearToColor(this: @This(), queue: *RenderQueue, color: Color) void {
@@ -47,7 +47,7 @@ pub const ZRenderInstanceVTable = struct {
     deinit: *const fn(instance: Instance) void,
     initWindow: *const fn(instance: Instance, settings: WindowSettings, setup: ZRenderSetup) ?*Window,
     deinitWindow: *const fn(instance: Instance, window: *Window) void,
-    runWindow: *const fn(instance: Instance, window: *Window) void,
+    run: *const fn(instance: Instance) void,
     clearToColor: *const fn (instance: Instance, renderQueue: *RenderQueue, color: Color) void,
 
 };
