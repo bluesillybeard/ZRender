@@ -79,7 +79,6 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             width: u32 = 800,
             height: u32 = 600,
             name: [:0]const u8 = "ZRender window",
-            monitor: ?u32 = null,
             yPos: ?u32 = null,
             xPos: ?u32 = null,
             resizable: bool = false,

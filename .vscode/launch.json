@@ -1,26 +1,32 @@
-{
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Launch simple example (debug)",
-            "preLaunchTask": "buildsimple",
-            "program": "${workspaceFolder}/zig-out/bin/simple",
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Launch windows example (debug)",
-            "preLaunchTask": "buildwindows",
-            "program": "${workspaceFolder}/zig-out/bin/windows",
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
+ {
+     "version": "0.2.0",
+     "configurations": [
+         {
+             "type": "lldb",
+             "request": "launch",
+             "name": "Launch simple  example (debug)",
+             "preLaunchTask": "buildsimple",
+             "program": "${workspaceFolder}/zig-out/bin/simple",
+             "args": [],
+             "cwd": "${workspaceFolder}"
+         },
+         {
+             "type": "lldb",
+             "request": "launch",
+             "name": "Launch windows  example (debug)",
+             "preLaunchTask": "buildwindows",
+             "program": "${workspaceFolder}/zig-out/bin/windows",
+             "args": [],
+             "cwd": "${workspaceFolder}"
+         },
+         {
+             "type": "lldb",
+             "request": "launch",
+             "name": "Launch windowPosition  example (debug)",
+             "preLaunchTask": "buildwindowPosition",
+             "program": "${workspaceFolder}/zig-out/bin/windowPosition",
+             "args": [],
+             "cwd": "${workspaceFolder}"
+         },
     ]
 }

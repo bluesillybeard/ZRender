@@ -1,35 +1,45 @@
-{
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "build",
-            "type": "shell",
-            "command": "zig build install",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "buildsimple",
-            "type": "shell",
-            "command": "zig build simple",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
-        },
-        {
-            "label": "buildwindows",
-            "type": "shell",
-            "command": "zig build windows",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
-        },
+ {
+     "version": "2.0.0",
+     "tasks": [
+         {
+             "label": "build",
+             "type": "shell",
+             "command": "zig build install",
+             "problemMatcher": [],
+             "group": {
+                 "kind": "build",
+                 "isDefault": true
+             }
+         },
+         {
+         "label": "buildsimple",
+             "type": "shell",
+             "command": "zig build simple",
+             "problemMatcher": [],
+             "group": {
+                 "kind": "build",
+                 "isDefault": false
+             }
+         },
+         {
+         "label": "buildwindows",
+             "type": "shell",
+             "command": "zig build windows",
+             "problemMatcher": [],
+             "group": {
+                 "kind": "build",
+                 "isDefault": false
+             }
+         },
+         {
+         "label": "buildwindowPosition",
+             "type": "shell",
+             "command": "zig build windowPosition",
+             "problemMatcher": [],
+             "group": {
+                 "kind": "build",
+                 "isDefault": false
+             }
+         },
     ]
 }

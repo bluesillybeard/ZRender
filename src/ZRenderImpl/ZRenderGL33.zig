@@ -197,11 +197,18 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
             queue: GL33RenderQueue,
 
             pub fn init(allocator: std.mem.Allocator, settings: stuff.WindowSettings, setup: stuff.ZRenderSetup) !*ZRenderGL33Window {
+                const xPos:sdl.WindowPosition = blk: {
+                    if(settings.xPos == null) break :blk .default
+                    else break :blk .{.absolute = @intCast(settings.xPos.?)};
+                };
+                const yPos:sdl.WindowPosition = blk: {
+                    if(settings.yPos == null) break :blk .default
+                    else break :blk .{.absolute = @intCast(settings.yPos.?)};
+                };
                 const w = ZRenderGL33Window{
-                    // TODO: window position
-                    .sdlWindow = try sdl.createWindow(settings.name, .default, .default, @intCast(settings.width), @intCast(settings.height), .{
+                    .sdlWindow = try sdl.createWindow(settings.name, xPos, yPos, @intCast(settings.width), @intCast(settings.height), .{
                         .resizable = settings.resizable,
-                        .context = .opengl, 
+                        .context = .opengl,
                     }),
                     .setup = setup,
                     .queue = GL33RenderQueue.init(allocator),

@@ -2,11 +2,12 @@ const std = @import("std");
 const sdl2sdk = @import("SDL.zig/build.zig");
 
 const examples = [_][2][]const u8 {
-    [2][]const u8{"simple", "examples/Simple.zig"},
-    [2][]const u8 {"windows", "examples/Windows.zig"},
+    [2][]const u8{"simple", "examples/0_Simple.zig"},
+    [2][]const u8 {"windows", "examples/1_Windows.zig"},
+    [2][]const u8 {"windowPosition", "examples/2_WindowPosition.zig"},
 };
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -43,6 +44,15 @@ pub fn build(b: *std.Build) void {
         var artifact = b.addInstallArtifact(exe, .{});
         step.dependOn(&artifact.step);
     }
+
+    // build the vscode step
+    var ideStep = b.step("vscode", "Generate the vscode launch.json and tasks.json");
+    var ideFiles = try generateVSCodeFiles(b.allocator);
+    var write = b.addWriteFiles();
+    write.addBytesToSource(ideFiles.launch, ".vscode/launch.json");
+    write.addBytesToSource(ideFiles.tasks, ".vscode/tasks.json");
+    ideStep.dependOn(&write.step);
+
 }
 
 pub fn linkLibs(exe: *std.Build.CompileStep, target: std.zig.CrossTarget, sdl2: *sdl2sdk) void {
@@ -50,4 +60,84 @@ pub fn linkLibs(exe: *std.Build.CompileStep, target: std.zig.CrossTarget, sdl2: 
     // I thought linking with SDL would be easy, but apparently it's fairly complex to do it correctly with cross-compilation support.
     // But, this wrapper does it for me so yay
     sdl2.link(exe, .dynamic);
+}
+
+pub fn generateVSCodeFiles(allocator: std.mem.Allocator) anyerror!struct {launch: []const u8, tasks: []const u8} {
+    // Editing vscode launch.json and tasks.json is normally OK,
+    // But with all these examples it is a giant pain,
+    // So the above list of examples will be used to generate the launch.json and tasks.json
+    // for the project, saving me quite a bit of work.
+
+    // TODO: It might be worth generating tasks/launch configs for other IDEs as well,
+    // it depends on if anyone other than me actually uses this project.
+
+    // Building a string in zig is a bit annoying at the moment.
+    // So, some whackyness is required.
+    // I would love to use the '++' operator, but making it work with the restrictions of comptime
+    // was becoming too much of a hassle to be worth it.
+
+    // For the sake of simplicity, just allocate a massive buffer that's larger than the file could ever reasonably be.
+    var launchBuffer = try allocator.alloc(u8, 1024 + 1024 * examples.len);
+    var tasksBuffer = try allocator.alloc(u8, 1024 + 1024 * examples.len);
+    var launchStream = std.io.fixedBufferStream(launchBuffer);
+    var tasksStream = std.io.fixedBufferStream(tasksBuffer);
+    var launch = launchStream.writer();
+    var tasks = tasksStream.writer();
+    _ = try launch.write(
+        \\ {
+        \\     "version": "0.2.0",
+        \\     "configurations": [
+        \\
+    );
+    _ = try tasks.write(
+        \\ {
+        \\     "version": "2.0.0",
+        \\     "tasks": [
+        \\         {
+        \\             "label": "build",
+        \\             "type": "shell",
+        \\             "command": "zig build install",
+        \\             "problemMatcher": [],
+        \\             "group": {
+        \\                 "kind": "build",
+        \\                 "isDefault": true
+        \\             }
+        \\         },
+        \\
+    );
+    inline for(examples) |example| {
+        const name = example[0];
+        _ = try launch.print(
+        \\         {{
+        \\             "type": "lldb",
+        \\             "request": "launch",
+        \\             "name": "Launch {s}  example (debug)",
+        \\             "preLaunchTask": "build{s}",
+        \\             "program": "${{workspaceFolder}}/zig-out/bin/{s}",
+        \\             "args": [],
+        \\             "cwd": "${{workspaceFolder}}"
+        \\         }},
+        \\
+        , .{name, name, name});
+        _ = try tasks.print(
+        \\         {{
+        \\         "label": "build{s}",
+        \\             "type": "shell",
+        \\             "command": "zig build {s}",
+        \\             "problemMatcher": [],
+        \\             "group": {{
+        \\                 "kind": "build",
+        \\                 "isDefault": false
+        \\             }}
+        \\         }},
+        \\
+        , .{name, name});
+    }
+    _ = try launch.write("    ]\n}");
+    _ = try tasks.write("    ]\n}");
+    var launchStr = launchBuffer[0..launch.context.pos];
+    var tasksStr = tasksBuffer[0..tasks.context.pos];
+
+    std.debug.print("Tasks:\n{s}\n\nlaunch:\n{s}\n\n", .{tasksStr, launchStr});
+    return .{.launch = launchStr, .tasks = tasksStr};
 }
