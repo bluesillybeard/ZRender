@@ -84,8 +84,8 @@ Plan (for each step, make an example or two):
 - ~~Get the minimal example "working"~~
 - ~~timing callbacks~~
 - ~~render queue (well, start it anyway - its only command for now will be to clear the screen to a color)~~
-- switch to SDL2 because GLFW has trouble with multiple OpenGL windows using one context
-- multiple windows
+- ~~switch to SDL2 because GLFW has trouble with multiple OpenGL windows using one context~~
+- ~~multiple windows~~
 - textures (should be pretty easy)
 - meshes (don't forget to keep track of attributes and the mesh type) (only support triangles and quads for now)
 - shaders
