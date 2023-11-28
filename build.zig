@@ -47,7 +47,6 @@ pub fn build(b: *std.Build) void {
 
 pub fn linkLibs(exe: *std.Build.CompileStep, target: std.zig.CrossTarget, sdl2: *sdl2sdk) void {
     _ = target;
-    exe.linkLibC();
     // I thought linking with SDL would be easy, but apparently it's fairly complex to do it correctly with cross-compilation support.
     // But, this wrapper does it for me so yay
     sdl2.link(exe, .dynamic);

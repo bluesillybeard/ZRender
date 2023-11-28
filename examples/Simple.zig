@@ -11,10 +11,10 @@ pub fn main() !void {
     var allocatorObj = alloc{};
     var allocator = allocatorObj.allocator();
     // create an instance with default parameters
-    var instance = try ZRender.init(allocator);
+    var instance = try ZRender.init(allocator, void{});
     defer instance.deinit();
     // create a window with default settings and debug setup
-    var window = instance.initWindow(.{}, ZRender.debug_setup).?;
-    defer instance.deinitWindow(window);
+    _ = instance.initWindow(.{}, ZRender.debug_setup).?;
+    // This runs the instance. It also implicitly ends the lifetimes of all the windows, so be careful with that.
     instance.run();
 }

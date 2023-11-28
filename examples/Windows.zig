@@ -12,8 +12,7 @@ const numWindows = 20;
 pub fn main() !void {
     var allocatorObj = alloc{};
     var allocator = allocatorObj.allocator();
-    // create an instance with default parameters
-    var instance = try ZRender.init(allocator);
+    var instance = try ZRender.init(allocator, void{});
     defer instance.deinit();
     // create a bunch of windows
     var windows = std.ArrayList(*ZRender.Window).init(allocator);
@@ -25,11 +24,6 @@ pub fn main() !void {
             .name =  &indexStrBuffer,
         }, ZRender.debug_setup) orelse @panic("Could not create window");
         windows.append(window) catch unreachable;
-    }
-    defer {
-        for(windows.items) |window| {
-            instance.deinitWindow(window);
-        }
     }
     instance.run();
 }
