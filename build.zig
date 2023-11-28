@@ -137,7 +137,5 @@ pub fn generateVSCodeFiles(allocator: std.mem.Allocator) anyerror!struct {launch
     _ = try tasks.write("    ]\n}");
     var launchStr = launchBuffer[0..launch.context.pos];
     var tasksStr = tasksBuffer[0..tasks.context.pos];
-
-    std.debug.print("Tasks:\n{s}\n\nlaunch:\n{s}\n\n", .{tasksStr, launchStr});
     return .{.launch = launchStr, .tasks = tasksStr};
 }

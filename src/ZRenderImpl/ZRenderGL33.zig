@@ -59,6 +59,7 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
                 this.newWindows.deinit();
                 this.windowsToDeinit.deinit();
                 sdl.quit();
+                this.allocator.destroy(this);
             }
 
             pub fn getCustomData(instance: Instance) options.CustomInstanceData {
@@ -98,17 +99,22 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
 
             fn actuallyDeinitWindow(instance: Instance, window: *ZRenderGL33Window) void {
                 var this = _this(instance);
+                // remove the window from the list
                 for(this.windows.items, 0..) |window_item, window_index| {
                     if(window_item == window) {
                         _ = this.windows.swapRemove(window_index);
                         break;
                     }
                 }
+                // deinit the draw queue
+                window.queue.deinit();
                 // If this was the last window, destroy the OpenGL context as well
                 if(this.windows.items.len == 0){
                     sdl.gl.deleteContext(this.context.?);
                 }
                 window.sdlWindow.destroy();
+                // Actually delete the window object
+                this.allocator.destroy(window);
             }
 
             pub fn run(instance: Instance) void {
@@ -121,7 +127,10 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
                         // TODO: send events to windows.
                         // I also think it might be worth making the window in charge of calling deinit when it recieves a close event
                         switch (event) {
-                            .quit => break :mainloop,
+                            .quit => {
+                                actuallyDeinitWindow(instance, this.windows.items[0]);
+                                break :mainloop;
+                            },
                             .window => |windowEvent| {
                                 switch (windowEvent.type) {
                                     .close => {

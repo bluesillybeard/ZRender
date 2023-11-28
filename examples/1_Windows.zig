@@ -26,5 +26,6 @@ pub fn main() !void {
         }, ZRender.debug_setup) orelse @panic("Could not create window");
         windows.append(window) catch unreachable;
     }
+    defer windows.deinit();
     instance.run();
 }
