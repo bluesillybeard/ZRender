@@ -9,7 +9,7 @@ const alloc = std.heap.GeneralPurposeAllocator(.{});
 
 pub fn main() !void {
     var allocatorObj = alloc{};
-    var allocator = allocatorObj.allocator();
+    const allocator = allocatorObj.allocator();
     // create an instance with default parameters
     var instance = try ZRender.init(allocator, void{});
     defer instance.deinit();

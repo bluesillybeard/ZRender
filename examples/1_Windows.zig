@@ -12,7 +12,7 @@ const numWindows = 20;
 pub fn main() !void {
     var allocatorObj = alloc{};
     defer _ = allocatorObj.deinit();
-    var allocator = allocatorObj.allocator();
+    const allocator = allocatorObj.allocator();
     var instance = try ZRender.init(allocator, void{});
     defer instance.deinit();
     // create a bunch of windows

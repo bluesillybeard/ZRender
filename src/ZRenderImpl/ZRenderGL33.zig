@@ -16,7 +16,7 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
         pub fn initInstance(allocator: std.mem.Allocator, initialCustomData: options.CustomInstanceData) !Instance {
             
             try sdl.init(.{.video = true});
-            var obj = ZRenderGL33Instance{
+            const obj = ZRenderGL33Instance{
                 .allocator = allocator,
                 .windows = std.ArrayList(*ZRenderGL33Window).init(allocator),
                 .newWindows = std.ArrayList(*ZRenderGL33Window).init(allocator),
@@ -24,7 +24,7 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
                 .context = null,
                 .customData = initialCustomData,
             };
-            var object = try allocator.create(ZRenderGL33Instance);
+            const object = try allocator.create(ZRenderGL33Instance);
             object.* = obj;
             const vtable = stuff.ZRenderInstanceVTable {
                 .deinit = &ZRenderGL33Instance.deinit,
@@ -63,13 +63,13 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
             }
 
             pub fn getCustomData(instance: Instance) options.CustomInstanceData {
-                var this = _this(instance);
+                const this = _this(instance);
                 return this.customData;
             }
 
             fn initWindow(instance: Instance, settings: stuff.WindowSettings, setup: stuff.ZRenderSetup) ?*Window {
                 var this = _this(instance);
-                var window = ZRenderGL33Window.init(this.allocator, settings, setup) catch |e| {
+                const window = ZRenderGL33Window.init(this.allocator, settings, setup) catch |e| {
                     std.io.getStdErr().writer().print("Error creating window: {s}", .{@errorName(e)}) catch return null;
                     return null;
                 };
@@ -87,13 +87,13 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
 
             pub fn deinitWindow(instance: Instance, window_uncast: *Window) void {
                 var this = _this(instance);
-                var window: *ZRenderGL33Window = @alignCast(@ptrCast(window_uncast));
+                const window: *ZRenderGL33Window = @alignCast(@ptrCast(window_uncast));
                 this.windowsToDeinit.append(window) catch unreachable;
             }
 
             pub fn getCustomWindowData(instance: Instance, window_uncast: *Window) options.CustomWindowData {
                 _ = instance;
-                var window: *ZRenderGL33Window = @alignCast(@ptrCast(window_uncast));
+                const window: *ZRenderGL33Window = @alignCast(@ptrCast(window_uncast));
                 return window.setup.customData;
             }
 
@@ -222,7 +222,7 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
                     .setup = setup,
                     .queue = GL33RenderQueue.init(allocator),
                 };
-                var object = try allocator.create(ZRenderGL33Window);
+                const object = try allocator.create(ZRenderGL33Window);
                 object.* = w;
                 return object;
             }

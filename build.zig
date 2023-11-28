@@ -47,7 +47,7 @@ pub fn build(b: *std.Build) !void {
 
     // build the vscode step
     var ideStep = b.step("vscode", "Generate the vscode launch.json and tasks.json");
-    var ideFiles = try generateVSCodeFiles(b.allocator);
+    const ideFiles = try generateVSCodeFiles(b.allocator);
     var write = b.addWriteFiles();
     write.addBytesToSource(ideFiles.launch, ".vscode/launch.json");
     write.addBytesToSource(ideFiles.tasks, ".vscode/tasks.json");
@@ -135,7 +135,7 @@ pub fn generateVSCodeFiles(allocator: std.mem.Allocator) anyerror!struct {launch
     }
     _ = try launch.write("    ]\n}");
     _ = try tasks.write("    ]\n}");
-    var launchStr = launchBuffer[0..launch.context.pos];
-    var tasksStr = tasksBuffer[0..tasks.context.pos];
+    const launchStr = launchBuffer[0..launch.context.pos];
+    const tasksStr = tasksBuffer[0..tasks.context.pos];
     return .{.launch = launchStr, .tasks = tasksStr};
 }
