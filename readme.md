@@ -98,7 +98,6 @@ Plan (for each step, make an example or two):
 - 
 
 Other things that should be done:
-- Window event management
 - make sure everything is consistent (Zig style guidelines, except variables and such use "camelCase" because pascal_case is super annoying to type in my opinion.)
 - If people complain, switch everything to use the actual zig style guidelines instead of my modified version
 - use "grep -rnI TODO" to find todos and complete them
