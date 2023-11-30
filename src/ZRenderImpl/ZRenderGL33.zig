@@ -121,36 +121,14 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
                 var this = _this(instance);
                 var lastFrameTime = std.time.microTimestamp();
                 var currentFrameTime = lastFrameTime;
-
-                mainloop: while(true) {
-                    while(sdl.pollEvent()) |event| {
-                        // TODO: send events to windows.
-                        // I also think it might be worth making the window in charge of calling deinit when it recieves a close event
-                        switch (event) {
-                            .quit => {
-                                actuallyDeinitWindow(instance, this.windows.items[0]);
-                                break :mainloop;
-                            },
-                            .window => |windowEvent| {
-                                switch (windowEvent.type) {
-                                    .close => {
-                                        const id = windowEvent.window_id;
-                                        if(sdl.Window.fromID(id)) |sdlWindow| {
-                                            // Find the actual ZRender window
-                                            for(this.windows.items) |window| {
-                                                if(window.sdlWindow.ptr == sdlWindow.ptr) {
-                                                    // Now that we have the ZRender window we can actually deinit it
-                                                    this.windowsToDeinit.append(window) catch unreachable;
-                                                }
-                                            }
-                                        }
-                                    },
-                                    else => {},
-                                }
-                            },
-                            else => {},
-                        }
+                // initialize the initial windows, since otherwise the main loop would immediately exit
+                for(this.newWindows.items) |newWindow| {
+                        this.windows.append(newWindow) catch unreachable;
                     }
+                this.newWindows.clearRetainingCapacity();
+                // keep running until all of the windows have closed.
+                while(this.windows.items.len > 0) {
+                    handleEvents(instance, currentFrameTime);
                     // Go through the windows that need to be (de)initialized
                     for(this.windowsToDeinit.items) |windowToDeinit| {
                         windowToDeinit.setup.onDeinit(instance, @ptrCast(windowToDeinit), currentFrameTime);
@@ -176,6 +154,43 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
                         window.queue.run(window);
                     }
                     lastFrameTime = currentFrameTime;
+                }
+            }
+
+            fn handleEvents(instance: Instance, currentFrameTime: i64) void {
+                //const this = _this(instance);
+                while(sdl.pollEvent()) |event| {
+                    switch (event) {
+                        .window => |windowEvent| {
+                            handleWindowEvent(instance, currentFrameTime, windowEvent);
+                        },
+                        else => {},
+                    }
+                }
+            }
+
+            fn handleWindowEvent(instance: Instance, currentFrameTime: i64, event: sdl.WindowEvent) void {
+                const this = _this(instance);
+                // get the actual window for this event
+                var windowOrNone: ?*ZRenderGL33Window = null;
+                const id = event.window_id;
+                if(sdl.Window.fromID(id)) |sdlWindow| {
+                    // Find the actual ZRender window
+                    for(this.windows.items) |window| {
+                        if(window.sdlWindow.ptr == sdlWindow.ptr) {
+                            windowOrNone = window;
+                        }
+                    }
+                }
+                // Instead of crashing when the window isn't found,
+                // Just return from the function as it's probably not a problem
+                if(windowOrNone == null) return;
+                var window = windowOrNone.?;
+                switch (event.type) {
+                    .close => {
+                        window.setup.onEvent(instance, @ptrCast(window), .exit, currentFrameTime);
+                    },
+                    else => {},
                 }
             }
 

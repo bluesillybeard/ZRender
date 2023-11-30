@@ -63,6 +63,13 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             presentFramebuffer: *const fn (instance: Instance, RenderQueue: *RenderQueue, vsync: bool) void,
         };
 
+        pub const ZRenderWindowEvent = union(enum) {
+            /// Exit event, for when the window should exit.
+            /// The window itself has to do the exiting, ZRender coundn't care less about the meaning of events.
+            exit,
+            // TODO: most (ideally all) of the events supported by SDL
+        };
+
         /// a setup is a set of all the callbacks & runtime information of a window.
         /// A user creates a setup, then uses that setup as an argument to creating a window.
         pub const ZRenderSetup = struct {
@@ -71,6 +78,9 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             onRender: *const fn(instance: Instance, window: *Window, queue: *RenderQueue, delta: i64, time: i64) void,
             /// Called right before a window is destroyed.
             onDeinit: *const fn(instance: Instance, window: *Window, time: i64) void,
+            /// Event handler. 
+            /// All events for all windows are enumerated each frame, before the windows are enumerated for onRender.
+            onEvent: *const fn(instance: Instance, window: *Window, event: ZRenderWindowEvent, time: i64) void,
             /// The initial value for the custom window data
             customData: options.CustomWindowData,
         };
@@ -114,11 +124,18 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             std.debug.print("Window {} destroyed.\n", .{window});
         }
 
+        fn debugSetupOnEvent(instance: Instance, window: *Window, event: ZRenderWindowEvent, time: i64) void {
+            _ = time;
+            switch (event) {
+                .exit => instance.deinitWindow(window),
+            }
+        }
         /// A pre-made setup that can be used to see if the library is working at a basic level.
         /// Will only work if the custom window data is void.
         pub const debug_setup = ZRenderSetup {
             .onRender = &debugSetupOnRender,
             .onDeinit = &debugSetupOnDeinit,
+            .onEvent = &debugSetupOnEvent,
             .customData = void{},
         };
     };
