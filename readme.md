@@ -84,20 +84,29 @@ Plan (for each step, make an example or two):
 - ~~Get the minimal example "working"~~
 - ~~timing callbacks~~
 - ~~render queue (well, start it anyway - its only command for now will be to clear the screen to a color)~~
-- ~~switch to SDL2 because GLFW has trouble with multiple OpenGL windows using one context~~
 - ~~multiple windows~~
-- textures (should be pretty easy)
 - meshes (don't forget to keep track of attributes and the mesh type) (only support triangles and quads for now)
-- shaders
+- textures (should be pretty easy)
+    - Zig supports SPIR-V as a compilation target. Wouldn't it be super cool to write shaders in Zig too? Zig all the way!
+- shaders (Only support SPIR-V binaries to make supporting both OpenGL and Vulkan easier)
     - shaders are a bit complex, since they basically define an entire pipeline.
     - Since all sets of shaders will just be a pixel and vertex shader, only bother with that.
     - uniforms could get interesting but VRender's system is probably ok
 - loading assets
 - modifying loaded assets
-- At this point in the plan, VRender should have a similar set of features as VRender.
-- 
+    - At this point in the plan, VRender should have a similar set of features as VRender.
+- Do a whole bunch of cleanup
+    - make the API consistent and add any potentially missing features
+    - make a bunch of tests to hopefully verify every feature
+- implement the Vulkan API
+    - use Vulkan 1.0 since later versions of Vulkan don't add many features that would be useful to me
+- Make sure all of the tests work the same with both Vulkan and OpenGL
+    - Make some more tests to really probe for any signifivant behavior differences between the OpenGL and Vulkan implementations
+        - Try to include shaders of various types to make sure the SPIR-V binaries work the same
+
 
 Other things that should be done:
-- make sure everything is consistent (Zig style guidelines, except variables and such use "camelCase" because pascal_case is super annoying to type in my opinion.)
-- If people complain, switch everything to use the actual zig style guidelines instead of my modified version
+- make sure everything is consistent (Zig style guidelines, except variables and such use camelCase because pascal_case is super annoying to type in my opinion.)
+    - If people complain, switch everything to use the actual zig style guidelines instead of my modified version
 - use "grep -rnI TODO" to find todos and complete them
+- rewrite this readme before the library goes public

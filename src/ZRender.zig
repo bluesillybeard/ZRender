@@ -16,7 +16,7 @@ pub fn ZRender(comptime options: ZRenderOptions) type {
             // This is where the API would be chosen, then instantiated.
             // Since the only API currently supported is OpenGL,
             // just return an instance of that.
-            return gl33.initInstance(allocator, initialCustomData);
+            return gl41.initInstance(allocator, initialCustomData);
         }
 
         pub const debug_setup = stuff.debug_setup;
@@ -24,6 +24,6 @@ pub fn ZRender(comptime options: ZRenderOptions) type {
         // Things you don't need to worry about
 
         const stuff = @import("ZRenderImpl/ZRenderStuff.zig").Stuff(options);
-        const gl33 = @import("ZRenderImpl/ZRenderGL33.zig").ZRenderGL33(options);
+        const gl41 = @import("ZRenderImpl/ZRenderGL41.zig").ZRenderGL41(options);
     };
 }

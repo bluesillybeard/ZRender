@@ -1,5 +1,5 @@
 const std = @import("std");
-const gl = @import("ext/GL33Bind.zig");
+const gl = @import("ext/GL41Bind.zig");
 const sdl = @import("sdl");
 const ZRenderOptions = @import("ZRenderOptions.zig");
 
@@ -7,7 +7,7 @@ fn loadProc(ctx: void, name: [:0]const u8) ?gl.FunctionPointer {
     _ = ctx;
     return sdl.gl.getProcAddress(name);
 }
-pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
+pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
     return struct {
         const stuff = @import("ZRenderStuff.zig").Stuff(options);
         // some 'static includes' because yeah
@@ -16,25 +16,25 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
         pub fn initInstance(allocator: std.mem.Allocator, initialCustomData: options.CustomInstanceData) !Instance {
             
             try sdl.init(.{.video = true});
-            const obj = ZRenderGL33Instance{
+            const obj = ZRenderGL41Instance{
                 .allocator = allocator,
-                .windows = std.ArrayList(*ZRenderGL33Window).init(allocator),
-                .newWindows = std.ArrayList(*ZRenderGL33Window).init(allocator),
-                .windowsToDeinit = std.ArrayList(*ZRenderGL33Window).init(allocator),
+                .windows = std.ArrayList(*ZRenderGL41Window).init(allocator),
+                .newWindows = std.ArrayList(*ZRenderGL41Window).init(allocator),
+                .windowsToDeinit = std.ArrayList(*ZRenderGL41Window).init(allocator),
                 .context = null,
                 .customData = initialCustomData,
             };
-            const object = try allocator.create(ZRenderGL33Instance);
+            const object = try allocator.create(ZRenderGL41Instance);
             object.* = obj;
             const vtable = stuff.ZRenderInstanceVTable {
-                .deinit = &ZRenderGL33Instance.deinit,
-                .getCustomData = &ZRenderGL33Instance.getCustomData,
-                .initWindow = &ZRenderGL33Instance.initWindow,
-                .deinitWindow = &ZRenderGL33Instance.deinitWindow,
-                .getCustomWindowData = &ZRenderGL33Instance.getCustomWindowData,
-                .run = &ZRenderGL33Instance.run,
-                .clearToColor = &ZRenderGL33Instance.clearToColor,
-                .presentFramebuffer = &ZRenderGL33Instance.presentFramebuffer,
+                .deinit = &ZRenderGL41Instance.deinit,
+                .getCustomData = &ZRenderGL41Instance.getCustomData,
+                .initWindow = &ZRenderGL41Instance.initWindow,
+                .deinitWindow = &ZRenderGL41Instance.deinitWindow,
+                .getCustomWindowData = &ZRenderGL41Instance.getCustomWindowData,
+                .run = &ZRenderGL41Instance.run,
+                .clearToColor = &ZRenderGL41Instance.clearToColor,
+                .presentFramebuffer = &ZRenderGL41Instance.presentFramebuffer,
             };
             return Instance {
                 .object = object,
@@ -42,14 +42,14 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
             };
         }
 
-        const ZRenderGL33Instance = struct {
+        const ZRenderGL41Instance = struct {
             allocator: std.mem.Allocator,
             context: ?sdl.gl.Context,
-            windows: std.ArrayList(*ZRenderGL33Window),
+            windows: std.ArrayList(*ZRenderGL41Window),
             // Windows that have been created but not added to the list of windows
-            newWindows: std.ArrayList(*ZRenderGL33Window),
+            newWindows: std.ArrayList(*ZRenderGL41Window),
             // Windows that have been queued to be deleted.
-            windowsToDeinit: std.ArrayList(*ZRenderGL33Window),
+            windowsToDeinit: std.ArrayList(*ZRenderGL41Window),
 
             customData: options.CustomInstanceData,
 
@@ -69,7 +69,7 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
 
             fn initWindow(instance: Instance, settings: stuff.WindowSettings, setup: stuff.ZRenderSetup) ?*Window {
                 var this = _this(instance);
-                const window = ZRenderGL33Window.init(this.allocator, settings, setup) catch |e| {
+                const window = ZRenderGL41Window.init(this.allocator, settings, setup) catch |e| {
                     std.io.getStdErr().writer().print("Error creating window: {s}", .{@errorName(e)}) catch return null;
                     return null;
                 };
@@ -79,6 +79,9 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
                 // Because OpenGL is stupid and annoying, it HAS to be attached to a window,
                 // which is why it is initialized after the window, not before.
                 if(this.context == null) {
+                    sdl.gl.setAttribute(.{.context_major_version = 4}) catch return null;
+                    sdl.gl.setAttribute(.{.context_minor_version = 1}) catch return null;
+                    sdl.gl.setAttribute(.{.context_profile_mask = .core}) catch return null;
                     this.context = sdl.gl.createContext(window.sdlWindow) catch return null;
                     gl.load(void{}, loadProc) catch return null;
                 }
@@ -87,17 +90,17 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
 
             pub fn deinitWindow(instance: Instance, window_uncast: *Window) void {
                 var this = _this(instance);
-                const window: *ZRenderGL33Window = @alignCast(@ptrCast(window_uncast));
+                const window: *ZRenderGL41Window = @alignCast(@ptrCast(window_uncast));
                 this.windowsToDeinit.append(window) catch unreachable;
             }
 
             pub fn getCustomWindowData(instance: Instance, window_uncast: *Window) options.CustomWindowData {
                 _ = instance;
-                const window: *ZRenderGL33Window = @alignCast(@ptrCast(window_uncast));
+                const window: *ZRenderGL41Window = @alignCast(@ptrCast(window_uncast));
                 return window.setup.customData;
             }
 
-            fn actuallyDeinitWindow(instance: Instance, window: *ZRenderGL33Window) void {
+            fn actuallyDeinitWindow(instance: Instance, window: *ZRenderGL41Window) void {
                 var this = _this(instance);
                 // remove the window from the list
                 for(this.windows.items, 0..) |window_item, window_index| {
@@ -172,7 +175,7 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
             fn handleWindowEvent(instance: Instance, currentFrameTime: i64, event: sdl.WindowEvent) void {
                 const this = _this(instance);
                 // get the actual window for this event
-                var windowOrNone: ?*ZRenderGL33Window = null;
+                var windowOrNone: ?*ZRenderGL41Window = null;
                 const id = event.window_id;
                 if(sdl.Window.fromID(id)) |sdlWindow| {
                     // Find the actual ZRender window
@@ -196,7 +199,7 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
 
             pub fn clearToColor(instance: Instance, renderQueueUncast: *stuff.RenderQueue, color: stuff.Color) void {
                 _ = instance;
-                var renderQueue: *GL33RenderQueue = @alignCast(@ptrCast(renderQueueUncast));
+                var renderQueue: *GL41RenderQueue = @alignCast(@ptrCast(renderQueueUncast));
                 renderQueue.items.append(.{
                     .clearToColor = color,
                 }) catch unreachable;
@@ -204,7 +207,7 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
 
             pub fn presentFramebuffer(instance: Instance, renderQueueUncast: *stuff.RenderQueue, vsync: bool) void {
                 _ = instance;
-                var renderQueue: *GL33RenderQueue = @alignCast(@ptrCast(renderQueueUncast));
+                var renderQueue: *GL41RenderQueue = @alignCast(@ptrCast(renderQueueUncast));
                 renderQueue.items.append(.{
                     .presentFramebuffer = vsync,
                 }) catch unreachable;
@@ -215,12 +218,12 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
             }
         };
 
-        const ZRenderGL33Window = struct {
+        const ZRenderGL41Window = struct {
             sdlWindow: sdl.Window,
             setup: stuff.ZRenderSetup,
-            queue: GL33RenderQueue,
+            queue: GL41RenderQueue,
 
-            pub fn init(allocator: std.mem.Allocator, settings: stuff.WindowSettings, setup: stuff.ZRenderSetup) !*ZRenderGL33Window {
+            pub fn init(allocator: std.mem.Allocator, settings: stuff.WindowSettings, setup: stuff.ZRenderSetup) !*ZRenderGL41Window {
                 const xPos:sdl.WindowPosition = blk: {
                     if(settings.xPos == null) break :blk .default
                     else break :blk .{.absolute = @intCast(settings.xPos.?)};
@@ -229,34 +232,34 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
                     if(settings.yPos == null) break :blk .default
                     else break :blk .{.absolute = @intCast(settings.yPos.?)};
                 };
-                const w = ZRenderGL33Window{
+                const w = ZRenderGL41Window{
                     .sdlWindow = try sdl.createWindow(settings.name, xPos, yPos, @intCast(settings.width), @intCast(settings.height), .{
                         .resizable = settings.resizable,
                         .context = .opengl,
                     }),
                     .setup = setup,
-                    .queue = GL33RenderQueue.init(allocator),
+                    .queue = GL41RenderQueue.init(allocator),
                 };
-                const object = try allocator.create(ZRenderGL33Window);
+                const object = try allocator.create(ZRenderGL41Window);
                 object.* = w;
                 return object;
             }
         };
 
-        const GL33RenderQueueItem = union(enum) {
+        const GL41RenderQueueItem = union(enum) {
             clearToColor: stuff.Color,
             /// the bool is vsync
             presentFramebuffer: bool,
         };
 
-        const GL33RenderQueue = struct {
+        const GL41RenderQueue = struct {
             // TODO: use a dependency tree instead of a list
             // TODO: (far future) optimize queue items a bit, such as combining overlapping clears.
-            items: std.ArrayList(GL33RenderQueueItem),
+            items: std.ArrayList(GL41RenderQueueItem),
             
             pub fn init(allocator: std.mem.Allocator) @This() {
                 return @This() {
-                    .items = std.ArrayList(GL33RenderQueueItem).init(allocator),
+                    .items = std.ArrayList(GL41RenderQueueItem).init(allocator),
                 };
             }
 
@@ -265,7 +268,7 @@ pub fn ZRenderGL33(comptime options: ZRenderOptions) type {
             }
 
             /// Runs the queue on the current OpenGL context and window, then clears the queue.
-            pub fn run(this: *@This(), window: *ZRenderGL33Window) void {
+            pub fn run(this: *@This(), window: *ZRenderGL41Window) void {
                 for(this.items.items) |item| {
                     switch (item) {
                         .clearToColor => |color| {

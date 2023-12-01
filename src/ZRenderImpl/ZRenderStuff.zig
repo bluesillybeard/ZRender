@@ -103,6 +103,58 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
         /// The render queue is given as an argument to instance functions.
         pub const RenderQueue = opaque{};
 
+        // GPU objects
+
+        // TODO: It might be worth supporting non-indexed vertex arrays? Probably not though.
+        /// A mesh. Can be either a triangle mesh or a quad mesh.
+        /// The actual mesh type is implemented by the instance, use instance functions on it.
+        pub const Mesh = opaque{};
+
+        /// Mesh type
+        pub const MeshType = enum {
+            triangles, quads,
+        };
+
+        /// Mesh attribute
+        pub const MeshAttribute = enum {
+            // base types
+            /// Boolean value
+            @"bool",
+            /// 32 bit signed twos-compliment integer
+            int,
+            /// 32 bit unsigned integer
+            uint,
+            /// 32 bit IEEE-754 float
+            float,
+            // 2D vectors
+            /// vector of two bools
+            bvec2,
+            /// vector of two ints
+            ivec2,
+            /// vector of two uints
+            uvec2,
+            /// vector of two floats
+            vec2,
+            // 3D vectors
+            /// vector of three bools
+            bvec3,
+            /// vector of three ints
+            ivec3,
+            /// vector of three uints
+            uvec3,
+            /// vector of three floats
+            vec3,
+            // 4D vectors
+            /// vector of four bools
+            bvec4,
+            /// vector of four ints
+            ivec4,
+            /// vector of four uints
+            uvec4,
+            /// vector of four floats
+            vec4,
+        };
+
         pub const Color = struct {
             r: u8,
             g: u8,
