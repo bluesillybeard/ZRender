@@ -98,6 +98,8 @@ Plan (for each step, make an example or two):
 - Do a whole bunch of cleanup
     - make the API consistent and add any potentially missing features
     - make a bunch of tests to hopefully verify every feature
+    - comment the absolute living bananas out of the code base (within reason of course)
+        - Use common sense, some places don't need a comment, and try to keep them consice and informative
 - implement the Vulkan API
     - use Vulkan 1.0 since later versions of Vulkan don't add many features that would be useful to me
 - Make sure all of the tests work the same with both Vulkan and OpenGL

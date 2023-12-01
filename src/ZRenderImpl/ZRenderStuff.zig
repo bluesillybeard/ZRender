@@ -15,9 +15,31 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             vtable: *const ZRenderInstanceVTable,
             object: *anyopaque,
             
-            //TODO: either generate these functions from the vtable, or vice-versa.
-            // They are circularly dependent, so I might need to 
-            // generate the Instance and Vtable types based on a list of functions
+            //TODO: DO NOT TRY TO either generate these functions from the vtable, or vice-versa.
+            // YOU WILL LOOSE YOU MIND AND GO INSANE
+            // I nearly went monkey brain dingus death mode
+            // and commited crimes or something
+            // because I wasted like 5 hours
+            // on doing that And nearly went
+            // complete bonkers hyper dingus brain
+            // idiot mega smooth shiny zombie ding dong
+            // bing bong coopy doopy poop
+            // I need to sleep before my brain dies.
+
+            // That is one benefit of C++ - dynamic dispatch
+            // is done for you and is very easy.
+
+            // OK so because I value my mental health
+            // ok well maybe i don't but whatever
+            // lok at these at some point:
+            // https://github.com/alexnask/interface.zig
+            // 
+
+            // Also a good idea would be to just use a blooming enum(union)
+            // instead of this OOP approach
+            // but that itself has quite a few downsides
+            // such as making it harder / nearly impossible for mods to add their own custom renderers
+            // like what Minecraft's Optifine does.
 
             pub inline fn deinit(this: @This()) void {
                 this.vtable.deinit(this);
