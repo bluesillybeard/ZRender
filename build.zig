@@ -14,12 +14,19 @@ pub fn build(b: *std.Build) !void {
     //ZRender depends on SDL.zig. As long as it's added as a module, it should work.
     const sdl2 = sdl2sdk.init(b, null);
 
+    //get zig-interface, since ZRender makes an interface. zig-interface is a git submodule.
+    const interfaceModule = b.addModule("interface", .{
+        .source_file = .{.path="zig-interface/src/interface.zig"},
+    });
+
     // ZRender is a source library.
     // It is meant to be directly incorperated into a projects source code,
     // using a zig module, like so.
     const zrender = b.addModule("zrender", .{
         .source_file = .{.path="src/ZRender.zig"},
-        .dependencies = &[_]std.Build.ModuleDependency{.{.name = "sdl", .module = sdl2.getWrapperModule()}},
+        .dependencies = &[_]std.Build.ModuleDependency{
+            .{.name = "sdl", .module = sdl2.getWrapperModule()},
+            .{.name = "interface", .module = interfaceModule}},
     });
 
     inline for(examples) |example| {

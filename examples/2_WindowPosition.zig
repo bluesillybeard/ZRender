@@ -17,7 +17,7 @@ pub fn main() !void {
     _ = instance.initWindow(.{
         .xPos = 100,
         .yPos = 50,
-    }, ZRender.debug_setup).?;
+    }, ZRender.debug_setup.makeFake()).?;
     // This runs the instance. It also implicitly ends the lifetimes of all the windows, so be careful with that.
     instance.run();
 }

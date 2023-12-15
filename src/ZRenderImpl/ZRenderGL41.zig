@@ -26,20 +26,7 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
             };
             const object = try allocator.create(ZRenderGL41Instance);
             object.* = obj;
-            const vtable = stuff.ZRenderInstanceVTable {
-                .deinit = &ZRenderGL41Instance.deinit,
-                .getCustomData = &ZRenderGL41Instance.getCustomData,
-                .initWindow = &ZRenderGL41Instance.initWindow,
-                .deinitWindow = &ZRenderGL41Instance.deinitWindow,
-                .getCustomWindowData = &ZRenderGL41Instance.getCustomWindowData,
-                .run = &ZRenderGL41Instance.run,
-                .clearToColor = &ZRenderGL41Instance.clearToColor,
-                .presentFramebuffer = &ZRenderGL41Instance.presentFramebuffer,
-            };
-            return Instance {
-                .object = object,
-                .vtable = &vtable,
-            };
+            return Instance.initFromImplementer(ZRenderGL41Instance, object);
         }
 
         const ZRenderGL41Instance = struct {
@@ -53,8 +40,7 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
 
             customData: options.CustomInstanceData,
 
-            pub fn deinit(instance: Instance) void {
-                var this = _this(instance);
+            pub fn deinit(this: *ZRenderGL41Instance) void {
                 this.windows.deinit();
                 this.newWindows.deinit();
                 this.windowsToDeinit.deinit();
@@ -62,13 +48,17 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 this.allocator.destroy(this);
             }
 
-            pub fn getCustomData(instance: Instance) options.CustomInstanceData {
-                const this = _this(instance);
+            pub fn getCustomData(this: *ZRenderGL41Instance) options.CustomInstanceData {
                 return this.customData;
             }
 
-            fn initWindow(instance: Instance, settings: stuff.WindowSettings, setup: stuff.ZRenderSetup) ?*Window {
-                var this = _this(instance);
+            pub fn initWindow(this: *ZRenderGL41Instance, settings: stuff.WindowSettings, s: stuff.FakeZRenderSetup) ?*Window {
+                const setup = stuff.ZRenderSetup{
+                    .customData = @ptrCast(s.customData),
+                    .onDeinit = @ptrCast(s.onDeinit),
+                    .onEvent = @ptrCast(s.onEvent),
+                    .onRender = @ptrCast(s.onRender),
+                };
                 const window = ZRenderGL41Window.init(this.allocator, settings, setup) catch |e| {
                     std.io.getStdErr().writer().print("Error creating window: {s}", .{@errorName(e)}) catch return null;
                     return null;
@@ -88,20 +78,18 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 return @as(*Window, @ptrCast(window));
             }
 
-            pub fn deinitWindow(instance: Instance, window_uncast: *Window) void {
-                var this = _this(instance);
+            pub fn deinitWindow(this: *ZRenderGL41Instance, window_uncast: *Window) void {
                 const window: *ZRenderGL41Window = @alignCast(@ptrCast(window_uncast));
                 this.windowsToDeinit.append(window) catch unreachable;
             }
 
-            pub fn getCustomWindowData(instance: Instance, window_uncast: *Window) options.CustomWindowData {
-                _ = instance;
+            pub fn getCustomWindowData(this: *ZRenderGL41Instance, window_uncast: *Window) *options.CustomWindowData {
+                _ = this;
                 const window: *ZRenderGL41Window = @alignCast(@ptrCast(window_uncast));
                 return window.setup.customData;
             }
 
-            fn actuallyDeinitWindow(instance: Instance, window: *ZRenderGL41Window) void {
-                var this = _this(instance);
+            fn actuallyDeinitWindow(this: *ZRenderGL41Instance, window: *ZRenderGL41Window) void {
                 // remove the window from the list
                 for(this.windows.items, 0..) |window_item, window_index| {
                     if(window_item == window) {
@@ -120,8 +108,8 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 this.allocator.destroy(window);
             }
 
-            pub fn run(instance: Instance) void {
-                var this = _this(instance);
+            pub fn run(this: *ZRenderGL41Instance) void {
+                const instance = Instance.initFromImplementer(ZRenderGL41Instance, this);
                 var lastFrameTime = std.time.microTimestamp();
                 var currentFrameTime = lastFrameTime;
                 // initialize the initial windows, since otherwise the main loop would immediately exit
@@ -131,11 +119,11 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 this.newWindows.clearRetainingCapacity();
                 // keep running until all of the windows have closed.
                 while(this.windows.items.len > 0) {
-                    handleEvents(instance, currentFrameTime);
+                    handleEvents(this, currentFrameTime);
                     // Go through the windows that need to be (de)initialized
                     for(this.windowsToDeinit.items) |windowToDeinit| {
                         windowToDeinit.setup.onDeinit(instance, @ptrCast(windowToDeinit), currentFrameTime);
-                        actuallyDeinitWindow(instance, windowToDeinit);
+                        actuallyDeinitWindow(this, windowToDeinit);
                     }
                     this.windowsToDeinit.clearRetainingCapacity();
                     for(this.newWindows.items) |newWindow| {
@@ -160,20 +148,19 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 }
             }
 
-            fn handleEvents(instance: Instance, currentFrameTime: i64) void {
-                //const this = _this(instance);
+            fn handleEvents(this: *ZRenderGL41Instance, currentFrameTime: i64) void {
                 while(sdl.pollEvent()) |event| {
                     switch (event) {
                         .window => |windowEvent| {
-                            handleWindowEvent(instance, currentFrameTime, windowEvent);
+                            handleWindowEvent(this, currentFrameTime, windowEvent);
                         },
                         else => {},
                     }
                 }
             }
 
-            fn handleWindowEvent(instance: Instance, currentFrameTime: i64, event: sdl.WindowEvent) void {
-                const this = _this(instance);
+            fn handleWindowEvent(this: *ZRenderGL41Instance, currentFrameTime: i64, event: sdl.WindowEvent) void {
+                const instance = Instance.initFromImplementer(ZRenderGL41Instance, this);
                 // get the actual window for this event
                 var windowOrNone: ?*ZRenderGL41Window = null;
                 const id = event.window_id;
@@ -197,24 +184,20 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 }
             }
 
-            pub fn clearToColor(instance: Instance, renderQueueUncast: *stuff.RenderQueue, color: stuff.Color) void {
-                _ = instance;
+            pub fn clearToColor(this: *ZRenderGL41Instance, renderQueueUncast: *stuff.RenderQueue, color: stuff.Color) void {
+                _ = this;
                 var renderQueue: *GL41RenderQueue = @alignCast(@ptrCast(renderQueueUncast));
                 renderQueue.items.append(.{
                     .clearToColor = color,
                 }) catch unreachable;
             }
 
-            pub fn presentFramebuffer(instance: Instance, renderQueueUncast: *stuff.RenderQueue, vsync: bool) void {
-                _ = instance;
+            pub fn presentFramebuffer(this: *ZRenderGL41Instance, renderQueueUncast: *stuff.RenderQueue, vsync: bool) void {
+                _ = this;
                 var renderQueue: *GL41RenderQueue = @alignCast(@ptrCast(renderQueueUncast));
                 renderQueue.items.append(.{
                     .presentFramebuffer = vsync,
                 }) catch unreachable;
-            }
-
-            inline fn _this(instance: Instance) *@This() {
-                return @alignCast(@ptrCast(instance.object));
             }
         };
 

@@ -1,3 +1,6 @@
 [submodule "SDL.zig"]
 	path = SDL.zig
 	url = https://github.com/MasterQ32/SDL.zig.git
+[submodule "zig-interface"]
+	path = zig-interface
+	url = https://github.com/bluesillybeard/zig-interface.git

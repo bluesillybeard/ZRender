@@ -1,5 +1,6 @@
 const std = @import("std");
 const ZRenderOptions = @import("ZRenderOptions.zig");
+const interface = @import("interface");
 
 pub fn Stuff (comptime options: ZRenderOptions) type {
     return struct {
@@ -7,91 +8,54 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
         // Anything you need *SHOULD* be in the ordinary ZRender file. ZRender.zig should be the only file you import.
         // Public types / functions that are in this / other files are exposed through ZRender.zig.
 
-        /// Instance is a Rust-like dynamic reference,
-        /// where the vtable is part of a wide pointer instead of being in the object itself.
-        /// Every ZRender function (with a few exceptions) is called from the instance.
-        /// I recomend either passing the instance through functions or making it a singleton.
-        pub const Instance = struct {
-            vtable: *const ZRenderInstanceVTable,
-            object: *anyopaque,
-            
-            //TODO: DO NOT TRY TO either generate these functions from the vtable, or vice-versa.
-            // YOU WILL LOOSE YOU MIND AND GO INSANE
-            // I nearly went monkey brain dingus death mode
-            // and commited crimes or something
-            // because I wasted like 5 hours
-            // on doing that And nearly went
-            // complete bonkers hyper dingus brain
-            // idiot mega smooth shiny zombie ding dong
-            // bing bong coopy doopy poop
-            // I need to sleep before my brain dies.
+        // This function exists because Instance is an interface created using zig-interface.
+        fn makeInstance(comptime Interface: type) type {
+            return struct {
+                // Functions that you can call
+                pub inline fn deinit(this: Interface) void {
+                    this.vtable.deinit(this.object);
+                }
 
-            // That is one benefit of C++ - dynamic dispatch
-            // is done for you and is very easy.
+                pub inline fn getCustomData(this: Interface) options.CustomInstanceData {
+                    return this.vtable.getCustomData(this.object);
+                }
 
-            // OK so because I value my mental health
-            // ok well maybe i don't but whatever
-            // lok at these at some point:
-            // https://github.com/alexnask/interface.zig
-            // 
+                pub inline fn initWindow(this: Interface, settings: WindowSettings, setup: FakeZRenderSetup) ?*Window {
+                    return this.vtable.initWindow(this.object, settings, setup);
+                }
 
-            // Also a good idea would be to just use a blooming enum(union)
-            // instead of this OOP approach
-            // but that itself has quite a few downsides
-            // such as making it harder / nearly impossible for mods to add their own custom renderers
-            // like what Minecraft's Optifine does.
+                pub inline fn deinitWindow(this: Interface, window: *Window) void {
+                    this.vtable.deinitWindow(this.object, window);
+                }
 
-            pub inline fn deinit(this: @This()) void {
-                this.vtable.deinit(this);
-            }
+                pub inline fn getCustomWindowData(this: Interface, window: *Window) *options.CustomWindowData {
+                    return this.vtable.getCustomWindowData(this.object, window);
+                }
 
-            pub inline fn getCustomData(this: @This()) options.CustomInstanceData {
-                return this.vtable.getCustomData(this);
-            }
-            
-            pub inline fn initWindow(this: @This(), settings: WindowSettings, setup: ZRenderSetup) ?*Window {
-                return this.vtable.initWindow(this, settings, setup);
-            }
+                pub inline fn run(this: Interface) void {
+                    this.vtable.run(this.object);
+                }
 
-            pub inline fn deinitWindow(this: @This(), window: *Window) void {
-                this.vtable.deinitWindow(this, window);
-            }
+                pub inline fn clearToColor(this: Interface, queue: *RenderQueue, color: Color) void {
+                    this.vtable.clearToColor(this.object, queue, color);
+                }
 
-            pub inline fn getCustomWindowData(this: @This(), window: *Window) options.CustomWindowData {
-                return this.vtable.getCustomWindowData(this, window);
-            }
+                pub inline fn presentFramebuffer(this: Interface, queue: *RenderQueue, vsync: bool) void {
+                    this.vtable.presentFramebuffer(this.object, queue, vsync);
+                }
+            };
+        }
+        pub const Instance = interface.makeInterface(makeInstance, .{.allow_bitwise_compatibility = true});
 
-            pub inline fn run(this: @This()) void {
-                this.vtable.run(this);    
-            }
-
-            pub inline fn clearToColor(this: @This(), queue: *RenderQueue, color: Color) void {
-                this.vtable.clearToColor(this, queue, color);
-            }
-
-            pub inline fn presentFramebuffer(this: @This(), queue: *RenderQueue, vsync: bool) void {
-                this.vtable.presentFramebuffer(this, queue, vsync);
-            }
+        /// ZRenderSetup is referenced by the interface, but it references the interface back, causing a circular dependency.
+        /// So to break the circular dependency, a non-dependent type is used.
+        pub const FakeZRenderSetup = extern struct {
+            onRender: *const anyopaque,
+            onDeinit: *const anyopaque,
+            onEvent: *const anyopaque,
+            // this is why custom data has to be a pointer.
+            customData: *anyopaque,
         };
-
-        pub const ZRenderInstanceVTable = struct {
-            deinit: *const fn(instance: Instance) void,
-            getCustomData: *const fn(instance: Instance) options.CustomInstanceData,
-            initWindow: *const fn(instance: Instance, settings: WindowSettings, setup: ZRenderSetup) ?*Window,
-            deinitWindow: *const fn(instance: Instance, window: *Window) void,
-            getCustomWindowData: *const fn(instance: Instance, window: *Window) options.CustomWindowData,
-            run: *const fn(instance: Instance) void,
-            clearToColor: *const fn (instance: Instance, renderQueue: *RenderQueue, color: Color) void,
-            presentFramebuffer: *const fn (instance: Instance, RenderQueue: *RenderQueue, vsync: bool) void,
-        };
-
-        pub const ZRenderWindowEvent = union(enum) {
-            /// Exit event, for when the window should exit.
-            /// The window itself has to do the exiting, ZRender coundn't care less about the meaning of events.
-            exit,
-            // TODO: most (ideally all) of the events supported by SDL
-        };
-
         /// a setup is a set of all the callbacks & runtime information of a window.
         /// A user creates a setup, then uses that setup as an argument to creating a window.
         pub const ZRenderSetup = struct {
@@ -104,9 +68,26 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             /// All events for all windows are enumerated each frame, before the windows are enumerated for onRender.
             onEvent: *const fn(instance: Instance, window: *Window, event: ZRenderWindowEvent, time: i64) void,
             /// The initial value for the custom window data
-            customData: options.CustomWindowData,
+            customData: *options.CustomWindowData,
+
+            pub inline fn makeFake(self: ZRenderSetup) FakeZRenderSetup {
+                return FakeZRenderSetup{
+                    .onRender = self.onRender,
+                    .onDeinit = self.onDeinit,
+                    .onEvent = self.onEvent,
+                    .customData = self.customData,
+                };
+            }
         };
 
+        pub const ZRenderWindowEvent = union(enum) {
+            /// Exit event, for when the window should exit.
+            /// The window itself has to do the exiting, ZRender coundn't care less about the meaning of events.
+            exit,
+            // TODO: most (ideally all) of the events supported by SDL
+        };
+
+        
         pub const WindowSettings = struct {
             width: u32 = 800,
             height: u32 = 600,
@@ -210,7 +191,7 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             .onRender = &debugSetupOnRender,
             .onDeinit = &debugSetupOnDeinit,
             .onEvent = &debugSetupOnEvent,
-            .customData = void{},
+            .customData = @constCast(&void{}),
         };
     };
 }

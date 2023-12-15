@@ -23,7 +23,7 @@ pub fn main() !void {
         indexStrBuffer[name.len] = 0;
         const window = instance.initWindow(.{
             .name =  &indexStrBuffer,
-        }, ZRender.debug_setup) orelse @panic("Could not create window");
+        }, ZRender.debug_setup.makeFake()) orelse @panic("Could not create window");
         windows.append(window) catch unreachable;
     }
     defer windows.deinit();
