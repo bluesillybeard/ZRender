@@ -229,12 +229,14 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 return mesh.* == .loaded;
             }
 
-            pub fn unloadMesh(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, mesh: *stuff.Mesh) void {
+            pub fn unloadMesh(this: *ZRenderGL41Instance, queue_uncast: *stuff.RenderQueue, mesh_uncast: *stuff.Mesh) void {
                 _ = this;
-                _ = queue;
-                _ = mesh;
+                const mesh: *GL41Mesh = @alignCast(@ptrCast(mesh_uncast));
+                const queue: *GL41RenderQueue = @alignCast(@ptrCast(queue_uncast));
             
-                @panic("Not implemented on the GL41 backend yet");
+                queue.items.append(GL41RenderQueueItem{
+                    .unloadMesh = mesh,
+                }) catch unreachable;
             }
 
             /// Replaces the entirety of the vertex buffer and indices of a mesh.
@@ -304,13 +306,13 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 /// The number of indices
                 indexCount: u32,
                 /// The handle to the OpenGL buffer object containing the indices
-                indexBufferObject: gl.GLint,
+                indexBufferObject: gl.GLuint,
                 /// The number of bytes contained in the vertices buffer
                 verticesBufferSize: u32,
                 /// The handle to the OpenGL buffer object containing the vertices
-                vertexBufferObject: gl.GLint,
+                vertexBufferObject: gl.GLuint,
                 /// The handle to the OpenGL vertex array object
-                vertexArrayObject: gl.GLint,
+                vertexArrayObject: gl.GLuint,
                 /// Mesh usage hint
                 usageHint: stuff.MeshUsageHint,
                 /// What type of mesh this is
@@ -327,7 +329,7 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
             },
             unloaded,
 
-            pub fn load(self: *@This()) void {
+            pub fn load(self: *@This(), allocator: std.mem.Allocator) void {
                 switch (self.*) {
                     .loaded => return,
                     .unloaded => @panic("Cannot reload unloaded mesh"),
@@ -336,8 +338,10 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                         var vao: gl.GLuint = undefined;
                         gl.genVertexArrays(1, &vao);
                         gl.bindVertexArray(vao);
-                        var vbo: gl.GLuint = undefined;
-                        gl.genBuffers(1, &vbo);
+                        var buffers = [2]gl.GLuint{undefined, undefined}; 
+                        gl.genBuffers(2, &buffers);
+                        const vbo = buffers[0];
+                        const ibo = buffers[1];
                         gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
                         // TODO: read up on the different OpenGL usage hints
                         const glUsageHint: gl.GLenum = switch (init.usageHint) {
@@ -347,8 +351,7 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                             .render_write => gl.DYNAMIC_DRAW,
                         };
                         gl.bufferData(gl.ARRAY_BUFFER, @intCast(init.vertexBuffer.len), init.vertexBuffer.ptr, glUsageHint);
-                        var ibo: gl.GLuint = undefined;
-                        gl.genBuffers(1, &ibo);
+                        
                         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
                         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, @intCast(init.indices.len * @sizeOf(u32)), init.indices.ptr, glUsageHint);
 
@@ -361,33 +364,61 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                         for(init.attributes, 0..) |attrib, i| {
                             const attribute = attribSize(attrib);
                             gl.enableVertexAttribArray(@intCast(i));
-                            gl.vertexAttribPointer(@intCast(i), attribElements(attrib), attribToGLenum(attrib), 0, @intCast(totalAttrib), @ptrFromInt(runningTotalAttrib));
+                            if(attribIsInt(attrib))
+                                gl.vertexAttribIPointer(@intCast(i), attribElements(attrib), attribToGLenum(attrib), @intCast(totalAttrib), @ptrFromInt(runningTotalAttrib))
+                            else
+                                gl.vertexAttribPointer(@intCast(i), attribElements(attrib), attribToGLenum(attrib), 0, @intCast(totalAttrib), @ptrFromInt(runningTotalAttrib));
                             runningTotalAttrib += attribute;
                         }
                         
+                        const n = GL41Mesh{
+                            .loaded = .{
+                                .indexCount = @intCast(init.indices.len),
+                                .indexBufferObject = ibo,
+                                .verticesBufferSize = @intCast(init.vertexBuffer.len),
+                                .vertexBufferObject = vbo,
+                                .vertexArrayObject = vao,
+                                .usageHint = init.usageHint,
+                                .type = init.type,
+                                .attributes = init.attributes,
+                            }
+                        };
+                        allocator.free(init.indices);
+                        allocator.free(init.vertexBuffer);
+                        self.* = n;
                     },
                 }   
             }
-            pub fn unload(self: *@This()) void {
-                _ = self;
+            pub fn unload(self: *@This(), allocator: std.mem.Allocator) void {
+                switch (self.*) {
+                    .loaded => |l| {
+                        allocator.free(l.attributes);
+                        var buffers = [2]gl.GLuint{l.vertexBufferObject, l.indexBufferObject}; 
+                        gl.deleteBuffers(2, &buffers);
+                        gl.deleteVertexArrays(1, &l.vertexArrayObject);
+                    },
+                    .unloaded => @panic("Cannot unload a mesh that is already loaded"),
+                    .initialized => @panic("Cannot unload a mesh that has not finished loading"),
+                }
+                allocator.destroy(self);
             }
         };
 
         fn attribSize(attrib: stuff.MeshAttribute) usize {
             return switch (attrib) {
-                .@"bool" => @sizeOf(gl.GLboolean),
+                .@"bool" => @sizeOf(gl.GLubyte),
                 .int => @sizeOf(gl.GLint),
                 .uint => @sizeOf(gl.GLuint),
                 .float => @sizeOf(gl.GLfloat),
-                .bvec2 => @sizeOf(gl.GLboolean) * 2,
+                .bvec2 => @sizeOf(gl.GLubyte) * 2,
                 .ivec2 => @sizeOf(gl.GLint) * 2,
                 .uvec2 => @sizeOf(gl.GLuint) * 2,
                 .vec2 => @sizeOf(gl.GLfloat) * 2,
-                .bvec3 => @sizeOf(gl.GLboolean) * 3,
+                .bvec3 => @sizeOf(gl.GLubyte) * 3,
                 .ivec3 => @sizeOf(gl.GLint) * 3,
                 .uvec3 => @sizeOf(gl.GLuint) * 3,
                 .vec3 => @sizeOf(gl.GLfloat) * 3,
-                .bvec4 => @sizeOf(gl.GLboolean) * 4,
+                .bvec4 => @sizeOf(gl.GLubyte) * 4,
                 .ivec4 => @sizeOf(gl.GLint) * 4,
                 .uvec4 => @sizeOf(gl.GLuint) * 4,
                 .vec4 => @sizeOf(gl.GLfloat) * 4,
@@ -396,19 +427,19 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
 
         fn attribToGLenum(attrib: stuff.MeshAttribute) gl.GLenum {
             return switch (attrib) {
-                .@"bool" => gl.BOOL,
+                .@"bool" => gl.UNSIGNED_BYTE,
                 .int => gl.INT,
                 .uint => gl.UNSIGNED_INT,
                 .float => gl.FLOAT,
-                .bvec2 => gl.BOOL,
+                .bvec2 => gl.UNSIGNED_BYTE,
                 .ivec2 => gl.INT,
                 .uvec2 => gl.UNSIGNED_INT,
                 .vec2 => gl.FLOAT,
-                .bvec3 => gl.BOOL,
+                .bvec3 => gl.UNSIGNED_BYTE,
                 .ivec3 => gl.INT,
                 .uvec3 => gl.UNSIGNED_INT,
                 .vec3 => gl.FLOAT,
-                .bvec4 => gl.BOOL,
+                .bvec4 => gl.UNSIGNED_BYTE,
                 .ivec4 => gl.INT,
                 .uvec4 => gl.UNSIGNED_INT,
                 .vec4 => gl.FLOAT,
@@ -433,6 +464,27 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 .ivec4 => 4,
                 .uvec4 => 4,
                 .vec4 => 4,
+            };
+        }
+
+        fn attribIsInt(attrib: stuff.MeshAttribute) bool {
+            return switch (attrib) {
+                .@"bool" => true,
+                .int => true,
+                .uint => true,
+                .float => false,
+                .bvec2 => true,
+                .ivec2 => true,
+                .uvec2 => true,
+                .vec2 => false,
+                .bvec3 => true,
+                .ivec3 => true,
+                .uvec3 => true,
+                .vec3 => false,
+                .bvec4 => true,
+                .ivec4 => true,
+                .uvec4 => true,
+                .vec4 => false,
             };
         }
 
@@ -477,10 +529,10 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                             sdl.gl.swapWindow(window.sdlWindow);
                         },
                         .loadMesh => |mesh| {
-                            mesh.load();
+                            mesh.load(this.items.allocator);
                         },
                         .unloadMesh => |mesh| {
-                            mesh.unload();
+                            mesh.unload(this.items.allocator);
                         }
                     }
                 }

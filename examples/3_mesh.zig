@@ -29,8 +29,8 @@ pub const MeshWindow = struct {
             );
         }
 
-        if(instance.isMeshLoaded(data.mesh.?)){
-            std.debug.print("Mesh was loaded successfully", .{});
+        if(instance.isMeshLoaded(data.mesh.?) and !data.ml){
+            std.debug.print("Mesh was loaded successfully\n", .{});
             data.ml = true;
         }
 
