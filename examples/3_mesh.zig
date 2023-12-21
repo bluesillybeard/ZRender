@@ -7,12 +7,12 @@ const alloc = std.heap.GeneralPurposeAllocator(.{});
 
 pub const Data = struct {
     mesh: ?*ZRender.Mesh = null,
-    ml: bool,
+    ml: bool = false,
+    exiting: bool = false,
 };
 
 pub const MeshWindow = struct {
     pub fn onRender(instance: ZRender.Instance, window: *ZRender.Window, queue: *ZRender.RenderQueue, delta: i64, time: i64) void {
-        _ = window;
         _ = delta;
         _ = time;
     
@@ -36,6 +36,11 @@ pub const MeshWindow = struct {
 
         instance.clearToColor(queue, ZRender.Color{.r = 0, .g = 0, .b = 0, .a = 1});
         instance.presentFramebuffer(queue, true);
+
+        if(data.exiting) {
+            instance.unloadMesh(queue, data.mesh.?);
+            instance.deinitWindow(window);
+        }
     }
     pub fn onDeinit(instance: ZRender.Instance, window: *ZRender.Window, time: i64) void {
         _ = instance;
@@ -45,10 +50,16 @@ pub const MeshWindow = struct {
 
     }
     pub fn onEvent(instance: ZRender.Instance, window: *ZRender.Window, event: ZRender.ZRenderWindowEvent, time: i64) void {
-        _ = instance;
         _ = window;
-        _ = event;
         _ = time;
+
+        var data: *Data = instance.getCustomData();
+
+        switch (event) {
+            .exit => {
+                data.exiting = true;
+            }
+        }
     
 
     }

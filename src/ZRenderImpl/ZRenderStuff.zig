@@ -58,7 +58,7 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
 
                 /// Loads a mesh into the GPU. Note that the mesh returned is not loaded immediately, but rather when this queue task runs.
                 /// This method does not take ownership of anything. (it copies them)
-                pub inline fn loadMesh(this: Interface, queue: *RenderQueue, t: MeshType, hint: MeshUsageHint, attributes: []const MeshAttribute, vertexBuffer: []const u8, indices: []const u32) *Mesh {
+                pub inline fn loadMesh(this: Interface, queue: *RenderQueue, t: MeshType, hint: MeshUsageHint, attributes: []const MeshAttribute, vertexBuffer: []const u8, indices: []const u32) ?*Mesh {
                     return this.vtable.loadMesh(this.object, queue, t, hint, attributes, vertexBuffer, indices);
                 }
 
@@ -173,8 +173,9 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             /// This mesh is rendered and written to frequently
             render_write,
         };
-
-        /// Mesh attribute
+        // TODO: replace boolean with u8 (byte)
+        // Because different API's might store booleans differently.
+        /// Mesh attribute. When constructing the vertex buffer, remember that it is always in little endian.
         pub const MeshAttribute = enum {
             // base types
             /// Boolean value

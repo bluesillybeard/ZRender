@@ -16,22 +16,19 @@ What are the design goals of ZRender?
     - sensible defaults to make it easier, but that can be highly configured for advanced usecases
 3. Focus on rendering
     - this isn't a game engine or toolkit, it's a rendering library.
-4. Modular
-    - components can be swapped in and out without too many links between pieces.
-    - They don't have to be user-configurable for now because I'm only making this for myself.
-5. Self contained
+4. Self contained
     - doesn't require external tools to work (Monogame's content system can die in a hole for all I care)
     - obviously dependencies (like OpenGl or GLFW) don't count
-6. Super simple 'hello world' and easy transition to more advanced features
+5. Super simple 'hello world' and easy transition to more advanced features
     - Such as ImGUI where a single line of code can render a debug window for testing.
     - like OpenGL but with less legacy bloat and hackery
 
 Supported platforms:
 - Windows (untested at the moment)
 - Linux & Steamdeck
+- Macos probably
 
 Platforms I want to support in the future:
-- Macos
 - Andriod
 - IOS
 - BSD
@@ -42,7 +39,7 @@ Platforms I want to support in the far future:
 - XBox
 - Nintendo switch
 - any other modern-ish game consoles
-- WebGL (with GLFW and legacy OpenGL backend.)
+- WebGL
 - WebGPU
 
 Features I want to have:

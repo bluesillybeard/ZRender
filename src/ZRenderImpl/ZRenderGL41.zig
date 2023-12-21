@@ -202,26 +202,31 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
 
             /// Loads a mesh into the GPU. Note that the mesh returned is not loaded immediately, but rather when this queue task runs.
             /// This method does not take ownership of anything. (it copies them)
-            pub fn loadMesh(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, t: stuff.MeshType, hint: stuff.MeshUsageHint, attributes: []const stuff.MeshAttribute, vertexBuffer: []const u8, indices: []const u32) *stuff.Mesh {
-                _ = this;
-                _ = queue;
-                _ = t;
-                _ = hint;
-                _ = attributes;
-                _ = vertexBuffer;
-                _ = indices;
-            
-                @panic("Not implemented on the GL41 backend yet");
+            pub fn loadMesh(this: *ZRenderGL41Instance, queue_uncast: *stuff.RenderQueue, t: stuff.MeshType, hint: stuff.MeshUsageHint, attributes: []const stuff.MeshAttribute, vertexBuffer: []const u8, indices: []const u32) ?*stuff.Mesh {
+                const mesh = this.allocator.create(GL41Mesh) catch return null;
+                mesh.* = .{
+                    .initialized = .{
+                        .type = t,
+                        .attributes = this.allocator.dupe(stuff.MeshAttribute, attributes) catch return null,
+                        .vertexBuffer = this.allocator.dupe(u8, vertexBuffer) catch return null,
+                        .indices = this.allocator.dupe(u32, indices) catch return null,
+                        .usageHint = hint,
+                    }
+                };
+                var queue: *GL41RenderQueue = @alignCast(@ptrCast(queue_uncast));
+                queue.items.append(GL41RenderQueueItem{
+                    .loadMesh = mesh,
+                }) catch return null;
+                return @ptrCast(mesh);
             }
 
             /// Returns true if a mesh is loaded. Note that queue methods that take a mesh will block until a mesh is loaded,
             /// And methods on the render queue will not actually run until the setup has exited onFrame.
             /// This method is undefined if a mesh is not live (such as if it was unloaded, or the pointer was not created from loadMesh)
-            pub fn isMeshLoaded(this: *ZRenderGL41Instance, mesh: *stuff.Mesh) bool {
+            pub fn isMeshLoaded(this: *ZRenderGL41Instance, mesh_uncast: *stuff.Mesh) bool {
                 _ = this;
-                _ = mesh;
-            
-                @panic("Not implemented on the GL41 backend yet");
+                const mesh: *GL41Mesh = @alignCast(@ptrCast(mesh_uncast));
+                return mesh.* == .loaded;
             }
 
             pub fn unloadMesh(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, mesh: *stuff.Mesh) void {
@@ -294,10 +299,150 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
             }
         };
 
+        const GL41Mesh = union(enum) {
+            loaded: struct {
+                /// The number of indices
+                indexCount: u32,
+                /// The handle to the OpenGL buffer object containing the indices
+                indexBufferObject: gl.GLint,
+                /// The number of bytes contained in the vertices buffer
+                verticesBufferSize: u32,
+                /// The handle to the OpenGL buffer object containing the vertices
+                vertexBufferObject: gl.GLint,
+                /// The handle to the OpenGL vertex array object
+                vertexArrayObject: gl.GLint,
+                /// Mesh usage hint
+                usageHint: stuff.MeshUsageHint,
+                /// What type of mesh this is
+                type: stuff.MeshType,
+                /// The mesh attributes, this memory matches the lifetime of the OpenGL object.
+                attributes: []const stuff.MeshAttribute,
+            },
+            initialized: struct {
+                type: stuff.MeshType,
+                attributes: []const stuff.MeshAttribute,
+                vertexBuffer: []const u8,
+                indices: []const u32,
+                usageHint: stuff.MeshUsageHint,
+            },
+            unloaded,
+
+            pub fn load(self: *@This()) void {
+                switch (self.*) {
+                    .loaded => return,
+                    .unloaded => @panic("Cannot reload unloaded mesh"),
+                    .initialized => |init| {
+                        // TODO: It might be worth consolidating loadMesh queue items into a single batch of them.
+                        var vao: gl.GLuint = undefined;
+                        gl.genVertexArrays(1, &vao);
+                        gl.bindVertexArray(vao);
+                        var vbo: gl.GLuint = undefined;
+                        gl.genBuffers(1, &vbo);
+                        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+                        // TODO: read up on the different OpenGL usage hints
+                        const glUsageHint: gl.GLenum = switch (init.usageHint) {
+                            .cold => gl.STATIC_DRAW,
+                            .render => gl.STATIC_DRAW,
+                            .write => gl.DYNAMIC_DRAW,
+                            .render_write => gl.DYNAMIC_DRAW,
+                        };
+                        gl.bufferData(gl.ARRAY_BUFFER, @intCast(init.vertexBuffer.len), init.vertexBuffer.ptr, glUsageHint);
+                        var ibo: gl.GLuint = undefined;
+                        gl.genBuffers(1, &ibo);
+                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+                        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, @intCast(init.indices.len * @sizeOf(u32)), init.indices.ptr, glUsageHint);
+
+                        var totalAttrib: usize = 0;
+                        for(init.attributes) |attribute| {
+                            totalAttrib += attribSize(attribute);
+                        }
+
+                        var runningTotalAttrib: usize = 0;
+                        for(init.attributes, 0..) |attrib, i| {
+                            const attribute = attribSize(attrib);
+                            gl.enableVertexAttribArray(@intCast(i));
+                            gl.vertexAttribPointer(@intCast(i), attribElements(attrib), attribToGLenum(attrib), 0, @intCast(totalAttrib), @ptrFromInt(runningTotalAttrib));
+                            runningTotalAttrib += attribute;
+                        }
+                        
+                    },
+                }   
+            }
+            pub fn unload(self: *@This()) void {
+                _ = self;
+            }
+        };
+
+        fn attribSize(attrib: stuff.MeshAttribute) usize {
+            return switch (attrib) {
+                .@"bool" => @sizeOf(gl.GLboolean),
+                .int => @sizeOf(gl.GLint),
+                .uint => @sizeOf(gl.GLuint),
+                .float => @sizeOf(gl.GLfloat),
+                .bvec2 => @sizeOf(gl.GLboolean) * 2,
+                .ivec2 => @sizeOf(gl.GLint) * 2,
+                .uvec2 => @sizeOf(gl.GLuint) * 2,
+                .vec2 => @sizeOf(gl.GLfloat) * 2,
+                .bvec3 => @sizeOf(gl.GLboolean) * 3,
+                .ivec3 => @sizeOf(gl.GLint) * 3,
+                .uvec3 => @sizeOf(gl.GLuint) * 3,
+                .vec3 => @sizeOf(gl.GLfloat) * 3,
+                .bvec4 => @sizeOf(gl.GLboolean) * 4,
+                .ivec4 => @sizeOf(gl.GLint) * 4,
+                .uvec4 => @sizeOf(gl.GLuint) * 4,
+                .vec4 => @sizeOf(gl.GLfloat) * 4,
+            };
+        }
+
+        fn attribToGLenum(attrib: stuff.MeshAttribute) gl.GLenum {
+            return switch (attrib) {
+                .@"bool" => gl.BOOL,
+                .int => gl.INT,
+                .uint => gl.UNSIGNED_INT,
+                .float => gl.FLOAT,
+                .bvec2 => gl.BOOL,
+                .ivec2 => gl.INT,
+                .uvec2 => gl.UNSIGNED_INT,
+                .vec2 => gl.FLOAT,
+                .bvec3 => gl.BOOL,
+                .ivec3 => gl.INT,
+                .uvec3 => gl.UNSIGNED_INT,
+                .vec3 => gl.FLOAT,
+                .bvec4 => gl.BOOL,
+                .ivec4 => gl.INT,
+                .uvec4 => gl.UNSIGNED_INT,
+                .vec4 => gl.FLOAT,
+            };
+        }
+
+        fn attribElements(attrib: stuff.MeshAttribute) gl.GLint {
+            return switch (attrib) {
+                .@"bool" => 1,
+                .int => 1,
+                .uint => 1,
+                .float => 1,
+                .bvec2 => 2,
+                .ivec2 => 2,
+                .uvec2 => 2,
+                .vec2 => 2,
+                .bvec3 => 3,
+                .ivec3 => 3,
+                .uvec3 => 3,
+                .vec3 => 3,
+                .bvec4 => 4,
+                .ivec4 => 4,
+                .uvec4 => 4,
+                .vec4 => 4,
+            };
+        }
+
+
         const GL41RenderQueueItem = union(enum) {
             clearToColor: stuff.Color,
             /// the bool is vsync
             presentFramebuffer: bool,
+            loadMesh: *GL41Mesh,
+            unloadMesh: *GL41Mesh,
         };
 
         const GL41RenderQueue = struct {
@@ -330,6 +475,12 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                                 sdl.gl.setSwapInterval(.immediate) catch @panic("Could not set swap interval to immediate");
                             }
                             sdl.gl.swapWindow(window.sdlWindow);
+                        },
+                        .loadMesh => |mesh| {
+                            mesh.load();
+                        },
+                        .unloadMesh => |mesh| {
+                            mesh.unload();
                         }
                     }
                 }
