@@ -19,6 +19,7 @@ What are the design goals of ZRender?
 4. Self contained
     - doesn't require external tools to work (Monogame's content system can die in a hole for all I care)
     - obviously dependencies (like OpenGl or GLFW) don't count
+    - One exception is for compiling shaders to SPIRV binaries - However, that is a standard practice among many rendering libraries so it's not a big deal
 5. Super simple 'hello world' and easy transition to more advanced features
     - Such as ImGUI where a single line of code can render a debug window for testing.
     - like OpenGL but with less legacy bloat and hackery
@@ -72,14 +73,15 @@ Plan (for each step, make an example or two):
 - ~~timing callbacks~~
 - ~~render queue (well, start it anyway - its only command for now will be to clear the screen to a color)~~
 - ~~multiple windows~~
-- meshes (don't forget to keep track of attributes and the mesh type) (only support triangles and quads for now)
-- textures (should be pretty easy)
+- ~~meshes (don't forget to keep track of attributes and the mesh type) (only support triangles and quads for now)~~
+    - note: Many methods still need to be actually implemented on the OpenGL 4.1 backend
 - shaders (Only support SPIR-V binaries to make supporting both OpenGL and Vulkan easier)
     - Zig supports SPIR-V as a compilation target. Wouldn't it be super cool to write shaders in Zig too? Zig all the way!
     - shaders are a bit complex, since they basically define an entire pipeline.
     - Since all sets of shaders will just be a pixel and vertex shader, only bother with that.
     - uniforms could get interesting but VRender's system is probably ok
     - Knowing apple, SPIR-V is completely broken and unusable on macos lol xd
+- textures (should be pretty easy)
 - loading assets
 - modifying loaded assets
     - At this point in the plan, VRender should have a similar set of features as VRender.
@@ -100,3 +102,12 @@ Other things that should be done:
     - If people complain, switch everything to use the actual zig style guidelines instead of my modified version
 - use "grep -rnI TODO" to find todos and complete them
 - rewrite this readme before the library goes public
+
+
+Runtime dependencies:
+- SDL2 (It also needs to be available at compile time so the executable can be linked against it)
+
+Compile time dependencies
+- Zig 0.12.0-dev.1819+5c1428ea9 (doesn't need to be in path, just used to run the build.zig)
+- glslangValidator in path (Part of the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home))
+    + Contrary to what you may think, glslangValidator can be used to create SPIRV binaries for OpenGL as well as Vulkan.
