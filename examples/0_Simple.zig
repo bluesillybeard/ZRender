@@ -12,7 +12,8 @@ pub fn main() !void {
     defer _ = allocatorObj.deinit();
     const allocator = allocatorObj.allocator();
     // create an instance with default parameters
-    var instance = try ZRender.init(allocator, void{});
+    var v = void{};
+    var instance = try ZRender.init(allocator, &v);
     defer instance.deinit();
     // create a window with default settings and debug setup
     _ = instance.initWindow(.{}, ZRender.debug_setup.makeFake()).?;

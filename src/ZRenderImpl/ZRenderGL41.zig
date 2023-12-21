@@ -13,7 +13,7 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
         // some 'static includes' because yeah
         const Instance = stuff.Instance;
         const Window = stuff.Window;
-        pub fn initInstance(allocator: std.mem.Allocator, initialCustomData: options.CustomInstanceData) !Instance {
+        pub fn initInstance(allocator: std.mem.Allocator, customData: *options.CustomInstanceData) !Instance {
             
             try sdl.init(.{.video = true});
             const obj = ZRenderGL41Instance{
@@ -22,7 +22,7 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 .newWindows = std.ArrayList(*ZRenderGL41Window).init(allocator),
                 .windowsToDeinit = std.ArrayList(*ZRenderGL41Window).init(allocator),
                 .context = null,
-                .customData = initialCustomData,
+                .customData = customData,
             };
             const object = try allocator.create(ZRenderGL41Instance);
             object.* = obj;
@@ -38,7 +38,7 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
             // Windows that have been queued to be deleted.
             windowsToDeinit: std.ArrayList(*ZRenderGL41Window),
 
-            customData: options.CustomInstanceData,
+            customData: *options.CustomInstanceData,
 
             pub fn deinit(this: *ZRenderGL41Instance) void {
                 this.windows.deinit();
@@ -48,7 +48,7 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 this.allocator.destroy(this);
             }
 
-            pub fn getCustomData(this: *ZRenderGL41Instance) options.CustomInstanceData {
+            pub fn getCustomData(this: *ZRenderGL41Instance) *options.CustomInstanceData {
                 return this.customData;
             }
 
@@ -198,6 +198,71 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 renderQueue.items.append(.{
                     .presentFramebuffer = vsync,
                 }) catch unreachable;
+            }
+
+            /// Loads a mesh into the GPU. Note that the mesh returned is not loaded immediately, but rather when this queue task runs.
+            /// This method does not take ownership of anything. (it copies them)
+            pub fn loadMesh(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, t: stuff.MeshType, hint: stuff.MeshUsageHint, attributes: []const stuff.MeshAttribute, vertexBuffer: []const u8, indices: []const u32) *stuff.Mesh {
+                _ = this;
+                _ = queue;
+                _ = t;
+                _ = hint;
+                _ = attributes;
+                _ = vertexBuffer;
+                _ = indices;
+            
+                @panic("Not implemented on the GL41 backend yet");
+            }
+
+            /// Returns true if a mesh is loaded. Note that queue methods that take a mesh will block until a mesh is loaded,
+            /// And methods on the render queue will not actually run until the setup has exited onFrame.
+            /// This method is undefined if a mesh is not live (such as if it was unloaded, or the pointer was not created from loadMesh)
+            pub fn isMeshLoaded(this: *ZRenderGL41Instance, mesh: *stuff.Mesh) bool {
+                _ = this;
+                _ = mesh;
+            
+                @panic("Not implemented on the GL41 backend yet");
+            }
+
+            pub fn unloadMesh(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, mesh: *stuff.Mesh) void {
+                _ = this;
+                _ = queue;
+                _ = mesh;
+            
+                @panic("Not implemented on the GL41 backend yet");
+            }
+
+            /// Replaces the entirety of the vertex buffer and indices of a mesh.
+            pub fn setMeshData(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, mesh: *stuff.Mesh, newVertexBuffer: []const u8, indices: []const u32) void {
+                _ = this;
+                _ = queue;
+                _ = mesh;
+                _ = newVertexBuffer;
+                _ = indices;
+            
+                @panic("Not implemented on the GL41 backend yet");
+            }
+
+            /// Replaces a section of the vertex buffer of a mesh. Start is an offset in bytes.
+            pub fn substituteMeshVertexBuffer(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, mesh: *stuff.Mesh, start: usize, vertexBuffer: []const u8) void {
+                _ = this;
+                _ = queue;
+                _ = mesh;
+                _ = start;
+                _ = vertexBuffer;
+            
+                @panic("Not implemented on the GL41 backend yet");
+            }
+
+            /// replaces a section of he indices of a mesh. Start is an offset index.
+            pub fn substituteMeshIndices(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, mesh: *stuff.Mesh, start: usize, indices: []const u32) void {
+                _ = this;
+                _ = queue;
+                _ = mesh;
+                _ = start;
+                _ = indices;
+            
+                @panic("Not implemented on the GL41 backend yet");
             }
         };
 

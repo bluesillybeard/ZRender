@@ -13,7 +13,8 @@ pub fn main() !void {
     var allocatorObj = alloc{};
     defer _ = allocatorObj.deinit();
     const allocator = allocatorObj.allocator();
-    var instance = try ZRender.init(allocator, void{});
+    var v = void{};
+    var instance = try ZRender.init(allocator, &v);
     defer instance.deinit();
     // create a bunch of windows
     var windows = std.ArrayList(*ZRender.Window).init(allocator);

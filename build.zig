@@ -5,6 +5,7 @@ const examples = [_][2][]const u8 {
     [2][]const u8{"simple", "examples/0_Simple.zig"},
     [2][]const u8 {"windows", "examples/1_Windows.zig"},
     [2][]const u8 {"windowPosition", "examples/2_WindowPosition.zig"},
+    [2][]const u8 {"mesh", "examples/3_mesh.zig"},
 };
 
 pub fn build(b: *std.Build) !void {

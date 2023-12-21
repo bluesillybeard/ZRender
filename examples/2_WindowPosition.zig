@@ -10,8 +10,9 @@ const alloc = std.heap.GeneralPurposeAllocator(.{});
 pub fn main() !void {
     var allocatorObj = alloc{};
     const allocator = allocatorObj.allocator();
+    var v = void{};
     // create an instance with default parameters
-    var instance = try ZRender.init(allocator, void{});
+    var instance = try ZRender.init(allocator, &v);
     defer instance.deinit();
     // create a window with default settings and debug setup
     _ = instance.initWindow(.{
