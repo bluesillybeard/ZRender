@@ -1,4 +1,4 @@
-// Example that modifies the mesh data
+// This does the same as example 5_mesh_replace_data, but the number of triangles stays the same.
 
 const ZRender = @import("zrender").ZRender(.{
     .CustomWindowData = MeshWindow,
@@ -11,11 +11,13 @@ const shader_embeds = @import("shader_embeds");
 
 pub const Data = struct {
     shader: ?*ZRender.Shader = null,
-    mesh: ?*ZRender.Mesh = null,
+    mesh: ?*ZRender.Mesh = null, 
     exiting: bool = false,
     lastChange: i64 = 0,
     rng: std.rand.Random,
     allocator: std.mem.Allocator,
+    numVertices: usize,
+    numIndices: usize,
 };
 
 pub const MeshWindow = struct {
@@ -31,42 +33,47 @@ pub const MeshWindow = struct {
                 shader_embeds.@"4_shader.vert.spv",
                 shader_embeds.@"4_shader.frag.spv",
             ).?;
-
+            // Create a temporary buffer to upload an empty mesh
+            var buffer = data.allocator.alloc(u32, data.numIndices + data.numVertices) catch unreachable;
+            for(0 .. buffer.len) |i| {
+                buffer[i] = 0;
+            }
+            const vertexBuffer = buffer[0 .. data.numIndices];
+            const indexBuffer = buffer[data.numIndices ..];
             data.mesh = instance.loadMesh(queue, .triangles, .render,
             &[_]ZRender.MeshAttribute{.vec2, .vec3},
-            // ZRender takes in vertices as if they were put into an extern struct with fields matching the attributes,
-            // So casting a float array like this is perfectly valid.
-            floatSliceToBytes(&[_]f32{
-                 //X    Y    R    G    B
-                 0.0,-0.5, 1.0, 0.0, 0.0,
-                 0.5, 0.5, 0.0, 1.0, 0.0,
-                -0.5, 0.5, 0.0, 0.0, 1.0,
-            }), &[_]u32{0, 1, 2}).?;
+            u32SliceToBytes(vertexBuffer), indexBuffer).?;
         }
-        // Every second
+        // Every second, randomly change 3 vertices and 3 indices.
         if(data.lastChange + std.time.us_per_s < time) {
-            // generate a random mesh
-            // somewhere between 0 and 255 triangles
-            const numTriangles: usize = data.rng.int(u8);
-            std.debug.print("Drawing {} triangles\n", .{numTriangles});
-            var vertices = std.ArrayList(f32).initCapacity(data.allocator, numTriangles * 3 * 5) catch unreachable;
-            defer vertices.deinit();
-            var indices = std.ArrayList(u32).initCapacity(data.allocator, numTriangles * 3) catch unreachable;
-            defer indices.deinit();
-            for(0 .. numTriangles) |triangle| {
-                _ = triangle;
-                for(0 .. 3) |vertex| {
-                    _ = vertex;
-                    for(0 .. 5) |index| {
-                        _ = index;
-                        vertices.append(data.rng.float(f32) * 2 - 1) catch unreachable;
-                    }
-                    indices.append(@intCast(indices.items.len)) catch unreachable;
-                }
+            // Randomize 3 vertices
+            for(0 .. 3) |i|{
+                _ = i;
+                // get an random index into the vertices
+                const randomIndex = data.rng.intRangeLessThan(usize, 0, data.numVertices);
+                // create a random number to write to that index
+                var value = data.rng.float(f32);
+                // Figure out if it's a color or a position
+                const attribute = randomIndex % 5;
+                // If it's a position, multiply it by 2 and subtract 1 so it covers the entire screen
+                if(attribute < 2) value = value * 2 - 1;
+
+                // update the mesh with that modification.
+                // Usually you'll want to change more than one vertex at a time.
+                instance.substituteMeshVertexBuffer(queue, data.mesh.?, randomIndex * @sizeOf(f32), floatSliceToBytes(&[1]f32{value}));
             }
-            // This replaced all of the mesh data with new data.
-            // Note that it's faster to use submeshData if possible.
-            instance.setMeshData(queue, data.mesh.?, floatSliceToBytes(vertices.items), indices.items);
+            // Randomize 3 indices (I will refer to them as elements)
+            for(0 .. 3) |i|{
+                _ = i;
+                // get an random index into the elements
+                const randomIndex = data.rng.intRangeLessThan(usize, 0, data.numIndices);
+                // create a random element to write to that index
+                // The range is divided by 5 since the element refers to an entire vertex, not a single float.
+                const value = data.rng.intRangeLessThan(u32, 0, @intCast(@divTrunc(data.numVertices, 5)));
+                // update the mesh with that modification.
+                // Usually you'll want to change more than one element at a time.
+                instance.substituteMeshIndices(queue, data.mesh.?, randomIndex, &[1]u32{value});
+            }
             data.lastChange = time;
         }
 
@@ -116,6 +123,9 @@ pub fn main() !void {
     var d = Data{
         .rng = random.random(),
         .allocator = allocator,
+        .numVertices = 10,
+        // More indices to guarantee vertices are shared.
+        .numIndices = 21,
     };
     // create an instance with default parameters
     var instance = try ZRender.init(allocator, &d);
@@ -134,6 +144,13 @@ pub fn main() !void {
 }
 
 // TODO: remove when @ptrCast works when the slice would change length
+fn u32SliceToBytes(i: []const u32)[]const u8 {
+    var r: []const u8 = undefined;
+    r.ptr = @ptrCast(i.ptr);
+    r.len = i.len * 4;
+    return r;
+}
+
 fn floatSliceToBytes(i: []const f32)[]const u8 {
     var r: []const u8 = undefined;
     r.ptr = @ptrCast(i.ptr);
