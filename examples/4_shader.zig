@@ -55,6 +55,7 @@ pub const MeshWindow = struct {
         instance.presentFramebuffer(queue, true);
 
         if(data.exiting) {
+            instance.unloadMesh(queue, data.mesh.?);
             instance.unloadShader(queue, data.shader.?);
             instance.deinitWindow(window);
         }

@@ -309,12 +309,11 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
             }
 
             /// Unloads a shader program
-            pub fn unloadShader(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, shader: *stuff.Shader) void {
+            pub fn unloadShader(this: *ZRenderGL41Instance, queue: *GL41RenderQueue, shader: *GL41ShaderProgram) void {
                 _ = this;
-                _ = queue;
-                _ = shader;
-            
-                @panic("Not implemented on the GL41 backend yet");
+                queue.items.append(GL41RenderQueueItem {
+                    .unloadShader = shader,
+                }) catch unreachable;
             }
 
             pub fn draw(this: *ZRenderGL41Instance, queue: *GL41RenderQueue, shader: *GL41ShaderProgram, draws: []const stuff.DrawInstance) void {
@@ -473,7 +472,7 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 program: gl.GLuint,
             },
 
-            pub fn load(self: *GL41ShaderProgram) bool {
+            pub fn load(self: *GL41ShaderProgram, allocator: std.mem.Allocator) bool {
                 switch (self.*) {
                     .initialized => |init| {
                         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -509,6 +508,8 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                         }
                         gl.detachShader(program, vertexShader);
                         gl.detachShader(program, fragmentShader);
+                        allocator.free(init.fragmentSpirvBinary);
+                        allocator.free(init.vertexSpirvBinary);
                         self.* = .{
                             .loaded = .{
                                 .attributes = init.attributes,
@@ -522,10 +523,10 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 }
             }
 
-            pub fn unload(self: *GL41ShaderProgram) void {
-                _ = self;
-            
-                @panic("Not implemented");
+            pub fn unload(self: *GL41ShaderProgram, allocator: std.mem.Allocator) void {
+                allocator.free(self.loaded.attributes);
+                gl.deleteProgram(self.loaded.program);
+                allocator.destroy(self);
             }
         };
 
@@ -665,20 +666,20 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                             mesh.unload(this.items.allocator);
                         },
                         .loadShader => |shader| {
-                            if(!shader.load()) std.debug.print("Error loading shader", .{});
+                            if(!shader.load(this.items.allocator)) std.debug.print("Error loading shader", .{});
                         },
                         .unloadShader => |shader| {
-                            shader.unload();
+                            shader.unload(this.items.allocator);
                         },
                         .draw => |d| {
-                            draw(d.shader, d.draws);
+                            draw(d.shader, d.draws, this.items.allocator);
                         }
                     }
                 }
                 this.items.clearRetainingCapacity();
             }
 
-            fn draw(shader: *GL41ShaderProgram, draws: []const stuff.DrawInstance) void {
+            fn draw(shader: *GL41ShaderProgram, draws: []const stuff.DrawInstance, allocator: std.mem.Allocator) void {
                 gl.useProgram(shader.loaded.program);
                 // TODO: instanced drawing instead of a separate draw call for every mesh.
                 for(draws) |instance| {
@@ -699,6 +700,11 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                     gl.drawElements(drawMethod, @intCast(instance.numElements), gl.UNSIGNED_INT, @ptrFromInt(instance.startElement * @sizeOf(u32)));
                     // TODO: uniforms
                 }
+                // free the draw objects
+                for(draws) |instance| {
+                    allocator.free(instance.uniforms);
+                }
+                allocator.free(draws);
             }
         };
     };
