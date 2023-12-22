@@ -245,8 +245,8 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
         pub const DrawInstance = struct {
             /// The first element to draw
             startElement: u32 = 0,
-            /// How many elements to draw
-            numElements: u32,
+            /// The maximum number of elements to draw.
+            numElements: u32 = std.math.maxInt(u32),
             /// The mesh to get element data from
             /// Note that this is still required even if a shader has no element inputs
             /// because OpenGL is dumb and always requires one to be bound

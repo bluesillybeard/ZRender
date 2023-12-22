@@ -7,6 +7,7 @@ const examples = [_][2][]const u8 {
     [2][]const u8 {"windowPosition", "examples/2_WindowPosition.zig"},
     [2][]const u8 {"mesh", "examples/3_mesh.zig"},
     [2][]const u8 {"shader", "examples/4_shader.zig"},
+    [2][]const u8 {"meshReplaceData", "examples/5_mesh_replace_data.zig"},
 };
 
 pub fn build(b: *std.Build) !void {

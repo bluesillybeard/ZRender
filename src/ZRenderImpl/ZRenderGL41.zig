@@ -247,13 +247,13 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
 
             /// Replaces the entirety of the vertex buffer and indices of a mesh.
             pub fn setMeshData(this: *ZRenderGL41Instance, queue: *GL41RenderQueue, mesh: *GL41Mesh, newVertexBuffer: []const u8, indices: []const u32) void {
-                _ = this;
-                _ = queue;
-                _ = mesh;
-                _ = newVertexBuffer;
-                _ = indices;
-            
-                @panic("Not implemented on the GL41 backend yet");
+                queue.items.append(GL41RenderQueueItem {
+                    .replaceMeshData = .{
+                        .mesh = mesh,
+                        .indices = this.allocator.dupe(u32, indices) catch unreachable,
+                        .vertexBuffer = this.allocator.dupe(u8, newVertexBuffer) catch unreachable,
+                    }
+                }) catch unreachable;
             }
 
             /// Replaces a section of the vertex buffer of a mesh. Start is an offset in bytes.
@@ -386,8 +386,26 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 indices: []const u32,
                 usageHint: stuff.MeshUsageHint,
             },
+            /// Takes ownership and frees the data given to it. Assumes it's already loaded.
+            pub fn replaceData(self: *GL41Mesh, allocator: std.mem.Allocator, vertexBuffer: []const u8, indices: []const u32) void {
+                // TODO: read up on the different OpenGL usage hints
+                const glUsageHint: gl.GLenum = switch (self.loaded.usageHint) {
+                    .cold => gl.STATIC_DRAW,
+                    .render => gl.STATIC_DRAW,
+                    .write => gl.DYNAMIC_DRAW,
+                    .render_write => gl.DYNAMIC_DRAW,
+                };
+                self.loaded.indexCount = @intCast(indices.len);
+                self.loaded.verticesBufferSize = @intCast(vertexBuffer.len);
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.loaded.indexBufferObject);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, @intCast(indices.len * @sizeOf(u32)), indices.ptr,glUsageHint);
+                gl.bindBuffer(gl.ARRAY_BUFFER, self.loaded.vertexBufferObject);
+                gl.bufferData(gl.ARRAY_BUFFER, @intCast(vertexBuffer.len), vertexBuffer.ptr, glUsageHint);
+                allocator.free(vertexBuffer);
+                allocator.free(indices);
+            }
 
-            pub fn load(self: *@This(), allocator: std.mem.Allocator) void {
+            pub fn load(self: *GL41Mesh, allocator: std.mem.Allocator) void {
                 switch (self.*) {
                     .loaded => return,
                     .initialized => |init| {
@@ -622,10 +640,15 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
             unloadMesh: *GL41Mesh,
             loadShader: *GL41ShaderProgram,
             unloadShader: *GL41ShaderProgram,
-            draw: struct{
+            draw: struct {
                 shader: *GL41ShaderProgram,
                 draws: []const stuff.DrawInstance,
-            }
+            },
+            replaceMeshData: struct {
+                mesh: *GL41Mesh,
+                vertexBuffer: []const u8,
+                indices: []const u32,
+            },
         };
 
         const GL41RenderQueue = struct {
@@ -673,7 +696,10 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                         },
                         .draw => |d| {
                             draw(d.shader, d.draws, this.items.allocator);
-                        }
+                        },
+                        .replaceMeshData => |data| {
+                            data.mesh.replaceData(this.items.allocator, data.vertexBuffer, data.indices);
+                        },
                     }
                 }
                 this.items.clearRetainingCapacity();
@@ -697,7 +723,8 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                         .triangles => gl.TRIANGLES,
                         .quads => gl.QUADS,
                     };
-                    gl.drawElements(drawMethod, @intCast(instance.numElements), gl.UNSIGNED_INT, @ptrFromInt(instance.startElement * @sizeOf(u32)));
+                    const numElements = @min(instance.numElements, mesh.loaded.indexCount - instance.startElement);
+                    gl.drawElements(drawMethod, @intCast(numElements), gl.UNSIGNED_INT, @ptrFromInt(instance.startElement * @sizeOf(u32)));
                     // TODO: uniforms
                 }
                 // free the draw objects
