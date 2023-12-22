@@ -30,6 +30,9 @@ pub fn ZRender(comptime options: ZRenderOptions) type {
         pub const Window = stuff.Window;
         pub const WindowSettings = stuff.WindowSettings;
         pub const ZRenderWindowEvent = stuff.ZRenderWindowEvent;
+        pub const Shader = stuff.Shader;
+        pub const DrawInstance = stuff.DrawInstance;
+        pub const DrawUniform = stuff.DrawUniform;
 
         pub const debug_setup = stuff.debug_setup;
 

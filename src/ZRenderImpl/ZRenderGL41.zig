@@ -271,6 +271,48 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
             
                 @panic("Not implemented on the GL41 backend yet");
             }
+
+            /// Loads a shader program (vertex and fragment shader) from SPIRV binaries.
+            /// Assumes the shaders use `main` as the entry point and don't depend on any other binaries.
+            pub fn loadShaderProgram(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, attributes: []const stuff.MeshAttribute, vertexSpirvBinary: []const u8, fragmentSpirvBinary: []const u8) ?*stuff.Shader {
+                _ = this;
+                _ = queue;
+                _ = attributes;
+                _ = vertexSpirvBinary;
+                _ = fragmentSpirvBinary;
+            
+                @panic("Not implemented on the GL41 backend yet");
+            }
+
+            // TODO: a more advanced shader loading function that allows linking more binaries togther and specifying the entry point
+
+            /// Returns true if a shader is loaded. Note that queue methods that take a shader will block until it is loaded,
+            /// And methods on the render queue will not actually run until the setup has exited onFrame.
+            /// This method is undefined if a shader is not live (such as if it was unloaded, or the pointer was not created from loadShader)
+            pub fn isShaderLoaded(this: *ZRenderGL41Instance, shader: *stuff.Shader) bool {
+                _ = this;
+                _ = shader;
+            
+                @panic("Not implemented on the GL41 backend yet");
+            }
+
+            /// Unloads a shader program
+            pub fn unloadShader(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, shader: *stuff.Shader) void {
+                _ = this;
+                _ = queue;
+                _ = shader;
+            
+                @panic("Not implemented on the GL41 backend yet");
+            }
+
+            pub fn draw(this: *ZRenderGL41Instance, queue: *stuff.RenderQueue, shader: *stuff.Shader, draws: []const stuff.DrawInstance) void {
+                _ = this;
+                _ = queue;
+                _ = shader;
+                _ = draws;
+            
+                @panic("Not implemented on the GL41 backend yet");
+            }
         };
 
         const ZRenderGL41Window = struct {

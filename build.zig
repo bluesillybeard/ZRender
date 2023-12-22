@@ -6,6 +6,7 @@ const examples = [_][2][]const u8 {
     [2][]const u8 {"windows", "examples/1_Windows.zig"},
     [2][]const u8 {"windowPosition", "examples/2_WindowPosition.zig"},
     [2][]const u8 {"mesh", "examples/3_mesh.zig"},
+    [2][]const u8 {"shader", "examples/4_shader.zig"},
 };
 
 pub fn build(b: *std.Build) !void {
@@ -30,6 +31,12 @@ pub fn build(b: *std.Build) !void {
             .{.name = "interface", .module = interfaceModule}},
     });
 
+    // The shaders cannot simply be read in by the examples
+    // because they are outside package path or whatever
+    // So a proxy is used so they can be imported into files that need shaders.
+    const shader_embeds = b.addModule("shader_embeds", .{
+        .source_file = .{.path = "shaders/bin/shader_embeds.zig"},
+    });
     inline for(examples) |example| {
         const name = example[0];
         const path = example[1];
@@ -40,6 +47,7 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
         exe.out_filename = name;
+        exe.addModule("shader_embeds", shader_embeds);
         exe.addModule("zrender", zrender);
         linkLibs(exe, target, sdl2);
 

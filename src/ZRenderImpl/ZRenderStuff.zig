@@ -87,6 +87,30 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
                 pub inline fn substituteMeshIndices(this: Interface, queue: *RenderQueue, mesh: *Mesh, start: usize, indices: []const u32) void {
                     this.vtable.substituteMeshIndices(this.object, queue, mesh, start, indices);
                 }
+
+                /// Loads a shader program (vertex and fragment shader) from SPIRV binaries.
+                /// Assumes the shaders use `main` as the entry point and don't depend on any other binaries.
+                pub inline fn loadShaderProgram(this: Interface, queue: *RenderQueue, attributes: []const MeshAttribute, vertexSpirvBinary: []const u8, fragmentSpirvBinary: []const u8) ?*Shader {
+                    return this.vtable.loadShaderProgram(this.object, queue, attributes, vertexSpirvBinary, fragmentSpirvBinary);
+                }
+
+                // TODO: a more advanced shader loading function that allows linking more binaries togther and specifying the entry point
+
+                /// Returns true if a shader is loaded. Note that queue methods that take a shader will block until it is loaded,
+                /// And methods on the render queue will not actually run until the setup has exited onFrame.
+                /// This method is undefined if a shader is not live (such as if it was unloaded, or the pointer was not created from loadShader)
+                pub inline fn isShaderLoaded(this: Interface, shader: *Shader) bool {
+                    return this.vtable.isShaderLoaded(this.object, shader);
+                }
+
+                /// Unloads a shader program
+                pub inline fn unloadShader(this: Interface, queue: *RenderQueue, shader: *Shader) void {
+                    this.vtable.unloadShader(this.object, queue, shader);
+                }
+
+                pub inline fn draw(this: Interface, queue: *RenderQueue, shader: *Shader, draws: []const DrawInstance) void {
+                    this.vtable.draw(this.object, queue, shader, draws);
+                }
             };
         }
         pub const Instance = interface.MakeInterface(makeInstance, .{.allow_bitwise_compatibility = true});
@@ -213,6 +237,25 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             uvec4,
             /// vector of four floats
             vec4,
+        };
+
+        pub const Shader = opaque{};
+
+        pub const DrawInstance = struct {
+            /// The first element to draw
+            startElement: u32 = 0,
+            /// How many elements to draw
+            numElements: u32,
+            /// The mesh to get element data from,
+            /// Is only allowed to be null if the shader has no attribute inputs
+            mesh: ?*Mesh = null,
+            /// The uniforms to use. Index-matched to the shader's uniform locations.
+            uniforms: []const DrawUniform = &[_]DrawUniform{},
+        };
+
+        pub const DrawUniform = union(enum) {
+            /// An empty uniform for skipping locations
+            none,
         };
 
         pub const Color = struct {

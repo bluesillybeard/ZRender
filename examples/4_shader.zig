@@ -1,6 +1,4 @@
-// Example for loading a basic mesh.
-// The mesh is not actually drawn - 5_shaderUniforms.zig is the earliest example that actually draws a mesh.
-// (4_shader.zig draws a triangle, but the vertices are hard-coded into the shader itself)
+// Example for drawing with a basic shader.
 
 const ZRender = @import("zrender").ZRender(.{
     .CustomWindowData = MeshWindow,
@@ -8,10 +6,12 @@ const ZRender = @import("zrender").ZRender(.{
 });
 const std = @import("std");
 const alloc = std.heap.GeneralPurposeAllocator(.{});
+const shader_embeds = @import("shader_embeds");
+
 
 pub const Data = struct {
-    mesh: ?*ZRender.Mesh = null,
-    ml: bool = false,
+    shader: ?*ZRender.Shader = null,
+    l: bool = false,
     exiting: bool = false,
 };
 
@@ -21,28 +21,26 @@ pub const MeshWindow = struct {
         _ = time;
     
         var data: *Data = instance.getCustomData();
-        if(data.mesh == null) {
-            data.mesh = instance.loadMesh(queue, ZRender.MeshType.quads, ZRender.MeshUsageHint.render,
-                &[_]ZRender.MeshAttribute{.vec2},
-                &[_]u8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0, 0
-                       0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, // 1, 0
-                       0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, // 1, 1
-                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, // 0, 1
-                       },
-                &[_]u32{1, 2, 3, 4}
+        if(data.shader == null) {
+            data.shader = instance.loadShaderProgram(queue,
+                &[_]ZRender.MeshAttribute{}, //This shader has no input attributes
+                // This is the compiled output from the glsl shaders.
+                // Look at shaders/4_shader.*, shaders/readme.md for more info.
+                shader_embeds.@"4_shader.vert.spv",
+                shader_embeds.@"4_shader.frag.spv",
             );
         }
 
-        if(instance.isMeshLoaded(data.mesh.?) and !data.ml){
-            std.debug.print("Mesh was loaded successfully\n", .{});
-            data.ml = true;
+        if(instance.isShaderLoaded(data.shader.?) and !data.l){
+            std.debug.print("Shader was loaded successfully\n", .{});
+            data.l = true;
         }
-
+        instance.draw(queue, data.shader.?, &[_]ZRender.DrawInstance{.{.numElements=3}});
         instance.clearToColor(queue, ZRender.Color{.r = 0, .g = 0, .b = 0, .a = 1});
         instance.presentFramebuffer(queue, true);
 
         if(data.exiting) {
-            instance.unloadMesh(queue, data.mesh.?);
+            instance.unloadShader(queue, data.shader.?);
             instance.deinitWindow(window);
         }
     }
@@ -73,8 +71,8 @@ pub fn main() !void {
     defer _ = allocatorObj.deinit();
     const allocator = allocatorObj.allocator();
     var d = Data{
-        .mesh = null,
-        .ml = false,
+        .shader = null,
+        .l = false,
     };
     // create an instance with default parameters
     var instance = try ZRender.init(allocator, &d);
