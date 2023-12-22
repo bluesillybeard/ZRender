@@ -11,6 +11,7 @@ const shader_embeds = @import("shader_embeds");
 
 pub const Data = struct {
     shader: ?*ZRender.Shader = null,
+    mesh: ?*ZRender.Mesh = null,
     l: bool = false,
     exiting: bool = false,
 };
@@ -23,20 +24,34 @@ pub const MeshWindow = struct {
         var data: *Data = instance.getCustomData();
         if(data.shader == null) {
             data.shader = instance.loadShaderProgram(queue,
-                &[_]ZRender.MeshAttribute{}, //This shader has no input attributes
+                &[_]ZRender.MeshAttribute{.vec2, .vec3}, //The vec2 is the position input, the vec3 is the color.
                 // This is the compiled output from the glsl shaders.
                 // Look at shaders/4_shader.*, shaders/readme.md for more info.
                 shader_embeds.@"4_shader.vert.spv",
                 shader_embeds.@"4_shader.frag.spv",
-            );
+            ).?;
+
+            data.mesh = instance.loadMesh(queue, .triangles, .render,
+            &[_]ZRender.MeshAttribute{.vec2, .vec3},
+            // ZRender takes in vertices as if they were put into an extern struct with fields matching the attributes,
+            // So casting a float array like this is perfectly valid.
+            floatSliceToBytes(&[_]f32{
+                 //X    Y    R    G    B
+                 0.0,-0.5, 1.0, 0.0, 0.0,
+                 0.5, 0.5, 0.0, 1.0, 0.0,
+                -0.5, 0.5, 0.0, 0.0, 1.0,
+            }), &[_]u32{0, 1, 2}).?;
         }
 
         if(instance.isShaderLoaded(data.shader.?) and !data.l){
             std.debug.print("Shader was loaded successfully\n", .{});
             data.l = true;
         }
-        instance.draw(queue, data.shader.?, &[_]ZRender.DrawInstance{.{.numElements=3}});
-        instance.clearToColor(queue, ZRender.Color{.r = 0, .g = 0, .b = 0, .a = 1});
+        instance.clearToColor(queue, ZRender.Color{.r = 0, .g = 0, .b = 0, .a = 255});
+        instance.draw(queue, data.shader.?, &[_]ZRender.DrawInstance{.{
+            .numElements=3,
+            .mesh = data.mesh.?,
+        }});
         instance.presentFramebuffer(queue, true);
 
         if(data.exiting) {
@@ -88,4 +103,12 @@ pub fn main() !void {
     _ = instance.initWindow(.{}, setup.makeFake()).?;
     // This runs the instance. It also implicitly ends the lifetimes of all the windows, so be careful with that.
     instance.run();
+}
+
+// TODO: remove when @ptrCast works when the slice would change length
+fn floatSliceToBytes(i: []const f32)[]const u8 {
+    var r: []const u8 = undefined;
+    r.ptr = @ptrCast(i.ptr);
+    r.len = i.len * 4;
+    return r;
 }

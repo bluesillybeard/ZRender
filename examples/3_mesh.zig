@@ -1,6 +1,5 @@
 // Example for loading a basic mesh.
-// The mesh is not actually drawn - 5_shaderUniforms.zig is the earliest example that actually draws a mesh.
-// (4_shader.zig draws a triangle, but the vertices are hard-coded into the shader itself)
+// The mesh is not actually drawn - 4_shader.zig is the earliest example that actually draws a mesh.
 
 const ZRender = @import("zrender").ZRender(.{
     .CustomWindowData = MeshWindow,

@@ -88,6 +88,7 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
                     this.vtable.substituteMeshIndices(this.object, queue, mesh, start, indices);
                 }
 
+                // TODO: see if it's possible to extract the input attributes from the shader code instead of getting it from the user.
                 /// Loads a shader program (vertex and fragment shader) from SPIRV binaries.
                 /// Assumes the shaders use `main` as the entry point and don't depend on any other binaries.
                 pub inline fn loadShaderProgram(this: Interface, queue: *RenderQueue, attributes: []const MeshAttribute, vertexSpirvBinary: []const u8, fragmentSpirvBinary: []const u8) ?*Shader {
@@ -246,11 +247,21 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
             startElement: u32 = 0,
             /// How many elements to draw
             numElements: u32,
-            /// The mesh to get element data from,
-            /// Is only allowed to be null if the shader has no attribute inputs
-            mesh: ?*Mesh = null,
+            /// The mesh to get element data from
+            /// Note that this is still required even if a shader has no element inputs
+            /// because OpenGL is dumb and always requires one to be bound
+            mesh: *Mesh,
             /// The uniforms to use. Index-matched to the shader's uniform locations.
             uniforms: []const DrawUniform = &[_]DrawUniform{},
+
+            pub fn dupe(self: DrawInstance, allocator: std.mem.Allocator) DrawInstance {
+                return DrawInstance{
+                    .startElement = self.startElement,
+                    .numElements = self.numElements,
+                    .mesh = self.mesh,
+                    .uniforms = allocator.dupe(DrawUniform, self.uniforms) catch unreachable
+                };
+            }
         };
 
         pub const DrawUniform = union(enum) {

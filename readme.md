@@ -106,7 +106,8 @@ Other things that should be done:
 
 Runtime dependencies:
 - SDL2 (It also needs to be available at compile time so the executable can be linked against it)
-
+- Either Vulkan or OpenGL 4.1 with the ARB_gl_spirv extension
+    - note: I might add support for bindless textures at some point, but it will not be required unless its support is virtually 100%
 Compile time dependencies
 - Zig 0.12.0-dev.1819+5c1428ea9 (doesn't need to be in path, just used to run the build.zig)
 - glslangValidator in path (Part of the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home))

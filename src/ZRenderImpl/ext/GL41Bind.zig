@@ -7,12 +7,12 @@
 // Generation parameters:
 // API:        GL_VERSION_4_1
 // Profile:    core
-// Extensions:
+// Extensions: GL_ARB_gl_spirv
 //
 
 //
 // This file was generated with the following command line:
-// generator /home/bluesillybeard/RawProjects/zig-opengl/bin/Debug/net7.0/generator.dll OpenGL-Registry/xml/gl.xml GL41Bind.zig GL_VERSION_4_1
+// generator /home/bluesillybeard/RawProjects/zig-opengl/bin/Debug/net7.0/generator.dll OpenGL-Registry/xml/gl.xml GL41Bind.zig GL_VERSION_4_1 GL_ARB_gl_spirv
 //
 
 const std = @import("std");
@@ -2914,6 +2914,27 @@ pub fn uniformBlockBinding(_program: GLuint, _uniformBlockIndex: GLuint, _unifor
     return @call(.always_tail, function_pointers.glUniformBlockBinding, .{ _program, _uniformBlockIndex, _uniformBlockBinding });
 }
 // Extensions:
+
+pub const GL_ARB_gl_spirv = struct {
+    pub const SHADER_BINARY_FORMAT_SPIR_V_ARB = 0x9551;
+    pub const SPIR_V_BINARY_ARB = 0x9552;
+
+    pub fn specializeShaderARB(_shader: GLuint, _pEntryPoint: [*c]const GLchar, _numSpecializationConstants: GLuint, _pConstantIndex: [*c]const GLuint, _pConstantValue: [*c]const GLuint) callconv(.C) void {
+        return @call(.always_tail, function_pointers.glSpecializeShaderARB, .{ _shader, _pEntryPoint, _numSpecializationConstants, _pConstantIndex, _pConstantValue });
+    }
+
+    pub fn load(load_ctx: anytype, get_proc_address: fn (@TypeOf(load_ctx), [:0]const u8) ?FunctionPointer) !void {
+        var success = true;
+        if (get_proc_address(load_ctx, "glSpecializeShaderARB")) |proc| {
+            function_pointers.glSpecializeShaderARB = @ptrCast(proc);
+        } else {
+            log.err("entry point glSpecializeShaderARB not found!", .{});
+            success = false;
+        }
+        if (!success)
+            return error.EntryPointNotFound;
+    }
+};
 
 // Loader API:
 pub fn load(load_ctx: anytype, get_proc_address: fn (@TypeOf(load_ctx), [:0]const u8) ?FunctionPointer) !void {
@@ -6269,6 +6290,7 @@ const function_signatures = struct {
     const glGetActiveUniformBlockiv = fn (_program: GLuint, _uniformBlockIndex: GLuint, _pname: GLenum, _params: [*c]GLint) callconv(.C) void;
     const glGetActiveUniformBlockName = fn (_program: GLuint, _uniformBlockIndex: GLuint, _bufSize: GLsizei, _length: [*c]GLsizei, _uniformBlockName: [*c]GLchar) callconv(.C) void;
     const glUniformBlockBinding = fn (_program: GLuint, _uniformBlockIndex: GLuint, _uniformBlockBinding: GLuint) callconv(.C) void;
+    const glSpecializeShaderARB = fn (_shader: GLuint, _pEntryPoint: [*c]const GLchar, _numSpecializationConstants: GLuint, _pConstantIndex: [*c]const GLuint, _pConstantValue: [*c]const GLuint) callconv(.C) void;
 };
 
 const function_pointers = struct {
@@ -6750,6 +6772,7 @@ const function_pointers = struct {
     var glGetActiveUniformBlockiv: *const function_signatures.glGetActiveUniformBlockiv = undefined;
     var glGetActiveUniformBlockName: *const function_signatures.glGetActiveUniformBlockName = undefined;
     var glUniformBlockBinding: *const function_signatures.glUniformBlockBinding = undefined;
+    var glSpecializeShaderARB: *const function_signatures.glSpecializeShaderARB = undefined;
 };
 
 test {
