@@ -258,24 +258,24 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
 
             /// Replaces a section of the vertex buffer of a mesh. Start is an offset in bytes.
             pub fn substituteMeshVertexBuffer(this: *ZRenderGL41Instance, queue: *GL41RenderQueue, mesh: *GL41Mesh, start: usize, vertexBuffer: []const u8) void {
-                _ = this;
-                _ = queue;
-                _ = mesh;
-                _ = start;
-                _ = vertexBuffer;
-            
-                @panic("Not implemented on the GL41 backend yet");
+                queue.items.append(GL41RenderQueueItem{
+                    .substituteMeshVertexBuffer = .{
+                        .mesh = mesh,
+                        .start = start,
+                        .vertexBuffer = this.allocator.dupe(u8, vertexBuffer) catch unreachable,
+                    }
+                }) catch unreachable;
             }
 
             /// replaces a section of he indices of a mesh. Start is an offset index.
             pub fn substituteMeshIndices(this: *ZRenderGL41Instance, queue: *GL41RenderQueue, mesh: *GL41Mesh, start: usize, indices: []const u32) void {
-                _ = this;
-                _ = queue;
-                _ = mesh;
-                _ = start;
-                _ = indices;
-            
-                @panic("Not implemented on the GL41 backend yet");
+                queue.items.append(GL41RenderQueueItem{
+                    .substituteMeshIndices = .{
+                        .mesh = mesh,
+                        .start = start,
+                        .indices = this.allocator.dupe(u32, indices) catch unreachable,
+                    }
+                }) catch unreachable;
             }
 
             /// Loads a shader program (vertex and fragment shader) from SPIRV binaries.
@@ -476,6 +476,16 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 }
                 allocator.destroy(self);
             }
+
+            pub fn subVertexBuffer(self: *GL41Mesh, start: usize, vertexBuffer: []const u8) void {
+                gl.bindBuffer(gl.ARRAY_BUFFER, self.loaded.vertexBufferObject);
+                gl.bufferSubData(gl.ARRAY_BUFFER, start, @intCast(vertexBuffer.len), vertexBuffer.ptr);
+            }
+
+            pub fn subIndices(self: *GL41Mesh, start: usize, indices: []const u32) void {
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.loaded.indexBufferObject);
+                gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, start, @intCast(indices.len * @sizeOf(u32)), indices.ptr);
+            }
         };
 
         const GL41ShaderProgram = union(enum) {
@@ -649,6 +659,16 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                 vertexBuffer: []const u8,
                 indices: []const u32,
             },
+            substituteMeshVertexBuffer: struct {
+                mesh: *GL41Mesh,
+                start: usize,
+                vertexBuffer: []const u8,
+            },
+            substituteMeshIndices: struct {
+                mesh: *GL41Mesh,
+                start: usize,
+                indices: []const u32
+            },
         };
 
         const GL41RenderQueue = struct {
@@ -699,6 +719,14 @@ pub fn ZRenderGL41(comptime options: ZRenderOptions) type {
                         },
                         .replaceMeshData => |data| {
                             data.mesh.replaceData(this.items.allocator, data.vertexBuffer, data.indices);
+                        },
+                        .substituteMeshVertexBuffer => |data| {
+                            data.mesh.subVertexBuffer(data.start, data.vertexBuffer);
+                            this.items.allocator.free(data.vertexBuffer);
+                        },
+                        .substituteMeshIndices => |data| {
+                            data.mesh.subIndices(data.start, data.indices);
+                            this.items.allocator.free(data.indices);
                         },
                     }
                 }

@@ -35,19 +35,23 @@ pub const MeshWindow = struct {
             ).?;
             // Create a temporary buffer to upload an empty mesh
             var buffer = data.allocator.alloc(u32, data.numIndices + data.numVertices) catch unreachable;
+            defer data.allocator.free(buffer);
             for(0 .. buffer.len) |i| {
                 buffer[i] = 0;
             }
             const vertexBuffer = buffer[0 .. data.numIndices];
             const indexBuffer = buffer[data.numIndices ..];
+            for(0 .. indexBuffer.len) |i| {
+                indexBuffer[i] = @intCast(i % @divTrunc(vertexBuffer.len, 5));
+            }
             data.mesh = instance.loadMesh(queue, .triangles, .render,
-            &[_]ZRender.MeshAttribute{.vec2, .vec3},
-            u32SliceToBytes(vertexBuffer), indexBuffer).?;
+                &[_]ZRender.MeshAttribute{.vec2, .vec3},
+                u32SliceToBytes(vertexBuffer), indexBuffer).?;
         }
         // Every second, randomly change 3 vertices and 3 indices.
         if(data.lastChange + std.time.us_per_s < time) {
-            // Randomize 3 vertices
-            for(0 .. 3) |i|{
+            // Randomize some vertices
+            for(0 .. 10) |i|{
                 _ = i;
                 // get an random index into the vertices
                 const randomIndex = data.rng.intRangeLessThan(usize, 0, data.numVertices);
@@ -62,8 +66,8 @@ pub const MeshWindow = struct {
                 // Usually you'll want to change more than one vertex at a time.
                 instance.substituteMeshVertexBuffer(queue, data.mesh.?, randomIndex * @sizeOf(f32), floatSliceToBytes(&[1]f32{value}));
             }
-            // Randomize 3 indices (I will refer to them as elements)
-            for(0 .. 3) |i|{
+            // Randomize some indices (I will refer to them as elements)
+            for(0 .. 50) |i|{
                 _ = i;
                 // get an random index into the elements
                 const randomIndex = data.rng.intRangeLessThan(usize, 0, data.numIndices);
@@ -123,9 +127,9 @@ pub fn main() !void {
     var d = Data{
         .rng = random.random(),
         .allocator = allocator,
-        .numVertices = 10,
+        .numVertices = 50,
         // More indices to guarantee vertices are shared.
-        .numIndices = 21,
+        .numIndices = 99,
     };
     // create an instance with default parameters
     var instance = try ZRender.init(allocator, &d);
