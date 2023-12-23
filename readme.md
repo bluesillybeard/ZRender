@@ -75,12 +75,8 @@ Plan (for each step, make an example or two):
 - ~~multiple windows~~
 - ~~meshes (don't forget to keep track of attributes and the mesh type) (only support triangles and quads for now)~~
     - note: Many methods still need to be actually implemented on the OpenGL 4.1 backend
-- shaders (Only support SPIR-V binaries to make supporting both OpenGL and Vulkan easier)
-    - Zig supports SPIR-V as a compilation target. Wouldn't it be super cool to write shaders in Zig too? Zig all the way!
-    - shaders are a bit complex, since they basically define an entire pipeline.
-    - Since all sets of shaders will just be a pixel and vertex shader, only bother with that.
-    - uniforms could get interesting but VRender's system is probably ok
-    - Knowing apple, SPIR-V is completely broken and unusable on macos lol xd
+- ~~shaders (Only support SPIR-V binaries to make supporting both OpenGL and Vulkan easier)~~
+    - shader uniforms
 - textures (should be pretty easy)
 - loading assets
 - modifying loaded assets
@@ -111,4 +107,3 @@ Runtime dependencies:
 Compile time dependencies
 - Zig 0.12.0-dev.1819+5c1428ea9 (doesn't need to be in path, just used to run the build.zig)
 - glslangValidator in path (Part of the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home))
-    + Contrary to what you may think, glslangValidator can be used to create SPIRV binaries for OpenGL as well as Vulkan.

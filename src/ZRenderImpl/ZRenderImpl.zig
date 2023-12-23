@@ -148,134 +148,6 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
                 };
             }
         };
-
-        pub const ZRenderWindowEvent = union(enum) {
-            /// Exit event, for when the window should exit.
-            /// The window itself has to do the exiting, ZRender coundn't care less about the meaning of events.
-            exit,
-            // TODO: most (ideally all) of the events supported by SDL
-        };
-
-        
-        pub const WindowSettings = struct {
-            width: u32 = 800,
-            height: u32 = 600,
-            name: [:0]const u8 = "ZRender window",
-            yPos: ?u32 = null,
-            xPos: ?u32 = null,
-            resizable: bool = false,
-        };
-
-        /// The actual window is implemented by the instance.
-        /// an instance of a window is given to a function called from the instance,
-        /// and the instance can treat the window as any object with the size of a pointer.
-        pub const Window = opaque{};
-
-        /// The actual render queue is implemented by the instance.
-        /// The render queue is given as an argument to instance functions.
-        pub const RenderQueue = opaque{};
-
-        // GPU objects
-
-        // TODO: It might be worth supporting non-indexed vertex arrays? Probably not though.
-        /// A mesh. Can be either a triangle mesh or a quad mesh.
-        /// The actual mesh type is implemented by the instance, use instance functions on it.
-        pub const Mesh = opaque{};
-
-        /// Mesh type
-        pub const MeshType = enum {
-            triangles, quads,
-        };
-
-        /// Mesh usage hint
-        pub const MeshUsageHint = enum {
-            /// This mesh is used infrequently
-            cold,
-            /// This mesh is rendered frequently
-            render,
-            /// this mesh is written to frequently
-            write,
-            /// This mesh is rendered and written to frequently
-            render_write,
-        };
-        // TODO: replace boolean with u8 (byte)
-        // Because different API's might store booleans differently.
-        /// Mesh attribute. When constructing the vertex buffer, remember that it is always in little endian.
-        pub const MeshAttribute = enum {
-            // base types
-            /// Boolean value
-            @"bool",
-            /// 32 bit signed twos-compliment integer
-            int,
-            /// 32 bit unsigned integer
-            uint,
-            /// 32 bit IEEE-754 float
-            float,
-            // 2D vectors
-            /// vector of two bools
-            bvec2,
-            /// vector of two ints
-            ivec2,
-            /// vector of two uints
-            uvec2,
-            /// vector of two floats
-            vec2,
-            // 3D vectors
-            /// vector of three bools
-            bvec3,
-            /// vector of three ints
-            ivec3,
-            /// vector of three uints
-            uvec3,
-            /// vector of three floats
-            vec3,
-            // 4D vectors
-            /// vector of four bools
-            bvec4,
-            /// vector of four ints
-            ivec4,
-            /// vector of four uints
-            uvec4,
-            /// vector of four floats
-            vec4,
-        };
-
-        pub const Shader = opaque{};
-
-        pub const DrawInstance = struct {
-            /// The first element to draw
-            startElement: u32 = 0,
-            /// The maximum number of elements to draw.
-            numElements: u32 = std.math.maxInt(u32),
-            /// The mesh to get element data from
-            /// Note that this is still required even if a shader has no element inputs
-            /// because OpenGL is dumb and always requires one to be bound
-            mesh: *Mesh,
-            /// The uniforms to use. Index-matched to the shader's uniform locations.
-            uniforms: []const DrawUniform = &[_]DrawUniform{},
-
-            pub fn dupe(self: DrawInstance, allocator: std.mem.Allocator) DrawInstance {
-                return DrawInstance{
-                    .startElement = self.startElement,
-                    .numElements = self.numElements,
-                    .mesh = self.mesh,
-                    .uniforms = allocator.dupe(DrawUniform, self.uniforms) catch unreachable
-                };
-            }
-        };
-
-        pub const DrawUniform = union(enum) {
-            /// An empty uniform for skipping locations
-            none,
-        };
-
-        pub const Color = struct {
-            r: u8,
-            g: u8,
-            b: u8,
-            a: u8,
-        };
-
         // a pre-made setup for the hello world example
         fn debugSetupOnRender(instance: Instance, window: *Window, queue: *RenderQueue, delta: i64, time: i64) void {
             _ = delta;
@@ -307,3 +179,130 @@ pub fn Stuff (comptime options: ZRenderOptions) type {
     };
 }
 
+pub const DrawInstance = struct {
+    /// The first element to draw
+    startElement: u32 = 0,
+    /// The maximum number of elements to draw.
+    numElements: u32 = std.math.maxInt(u32),
+    /// The mesh to get element data from
+    /// Note that this is still required even if a shader has no element inputs
+    /// because OpenGL is dumb and always requires one to be bound
+    mesh: *Mesh,
+    /// The uniforms to use. Index-matched to the shader's uniform locations.
+    uniforms: []const DrawUniform = &[_]DrawUniform{},
+
+    pub fn dupe(self: DrawInstance, allocator: std.mem.Allocator) DrawInstance {
+        return DrawInstance{
+            .startElement = self.startElement,
+            .numElements = self.numElements,
+            .mesh = self.mesh,
+            .uniforms = allocator.dupe(DrawUniform, self.uniforms) catch unreachable
+        };
+    }
+};
+
+pub const DrawUniform = union(enum) {
+    /// An empty uniform for skipping locations
+    none,
+};
+
+pub const Color = struct {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
+};
+
+
+pub const ZRenderWindowEvent = union(enum) {
+    /// Exit event, for when the window should exit.
+    /// The window itself has to do the exiting, ZRender coundn't care less about the meaning of events.
+    exit,
+    // TODO: most (ideally all) of the events supported by SDL
+};
+
+
+pub const WindowSettings = struct {
+    width: u32 = 800,
+    height: u32 = 600,
+    name: [:0]const u8 = "ZRender window",
+    yPos: ?u32 = null,
+    xPos: ?u32 = null,
+    resizable: bool = false,
+};
+
+/// The actual window is implemented by the instance.
+/// an instance of a window is given to a function called from the instance,
+/// and the instance can treat the window as any object with the size of a pointer.
+pub const Window = opaque{};
+
+/// The actual render queue is implemented by the instance.
+/// The render queue is given as an argument to instance functions.
+pub const RenderQueue = opaque{};
+
+// GPU objects
+
+// TODO: It might be worth supporting non-indexed vertex arrays? Probably not though.
+/// A mesh. Can be either a triangle mesh or a quad mesh.
+/// The actual mesh type is implemented by the instance, use instance functions on it.
+pub const Mesh = opaque{};
+
+/// Mesh type
+pub const MeshType = enum {
+    triangles, quads,
+};
+
+/// Mesh usage hint
+pub const MeshUsageHint = enum {
+    /// This mesh is used infrequently
+    cold,
+    /// This mesh is rendered frequently
+    render,
+    /// this mesh is written to frequently
+    write,
+    /// This mesh is rendered and written to frequently
+    render_write,
+};
+// TODO: replace boolean with u8 (byte)
+// Because different API's might store booleans differently.
+/// Mesh attribute. When constructing the vertex buffer, remember that it is always in little endian.
+pub const MeshAttribute = enum {
+    // base types
+    /// unsigned byte
+    byte,
+    /// 32 bit signed twos-compliment integer
+    int,
+    /// 32 bit unsigned integer
+    uint,
+    /// 32 bit IEEE-754 float
+    float,
+    // 2D vectors
+    /// vector of two bytes
+    bvec2,
+    /// vector of two ints
+    ivec2,
+    /// vector of two uints
+    uvec2,
+    /// vector of two floats
+    vec2,
+    // 3D vectors
+    /// vector of three bytes
+    bvec3,
+    /// vector of three ints
+    ivec3,
+    /// vector of three uints
+    uvec3,
+    /// vector of three floats
+    vec3,
+    // 4D vectors
+    /// vector of four bytes
+    bvec4,
+    /// vector of four ints
+    ivec4,
+    /// vector of four uints
+    uvec4,
+    /// vector of four floats
+    vec4,
+};
+
+pub const Shader = opaque{};

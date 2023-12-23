@@ -21,24 +21,25 @@ pub fn ZRender(comptime options: ZRenderOptions) type {
 
         // A bunch of stuff in no particular order
         pub const ZRenderSetup = stuff.ZRenderSetup;
-        pub const Color = stuff.Color;
-        pub const Mesh = stuff.Mesh;
-        pub const MeshAttribute = stuff.MeshAttribute;
-        pub const MeshType = stuff.MeshType;
-        pub const MeshUsageHint = stuff.MeshUsageHint;
-        pub const RenderQueue = stuff.RenderQueue;
-        pub const Window = stuff.Window;
-        pub const WindowSettings = stuff.WindowSettings;
-        pub const ZRenderWindowEvent = stuff.ZRenderWindowEvent;
-        pub const Shader = stuff.Shader;
-        pub const DrawInstance = stuff.DrawInstance;
-        pub const DrawUniform = stuff.DrawUniform;
+        pub const Color = impl.Color;
+        pub const Mesh = impl.Mesh;
+        pub const MeshAttribute = impl.MeshAttribute;
+        pub const MeshType = impl.MeshType;
+        pub const MeshUsageHint = impl.MeshUsageHint;
+        pub const RenderQueue = impl.RenderQueue;
+        pub const Window = impl.Window;
+        pub const WindowSettings = impl.WindowSettings;
+        pub const ZRenderWindowEvent = impl.ZRenderWindowEvent;
+        pub const Shader = impl.Shader;
+        pub const DrawInstance = impl.DrawInstance;
+        pub const DrawUniform = impl.DrawUniform;
 
         pub const debug_setup = stuff.debug_setup;
 
         // Things you don't need to worry about
 
-        const stuff = @import("ZRenderImpl/ZRenderStuff.zig").Stuff(options);
+        const impl = @import("ZRenderImpl/ZRenderImpl.zig");
+        const stuff = impl.Stuff(options);
         const gl41 = @import("ZRenderImpl/ZRenderGL41.zig").ZRenderGL41(options);
     };
 }
