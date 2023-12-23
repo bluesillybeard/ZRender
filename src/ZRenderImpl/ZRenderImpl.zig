@@ -4,10 +4,6 @@ const interface = @import("interface");
 
 pub fn Stuff (comptime options: ZRenderOptions) type {
     return struct {
-        // Stuff that is used by many files
-        // Anything you need *SHOULD* be in the ordinary ZRender file. ZRender.zig should be the only file you import.
-        // Public types / functions that are in this / other files are exposed through ZRender.zig.
-
         // This function exists because Instance is an interface created using zig-interface.
         fn makeInstance(comptime Interface: type) type {
             return struct {
