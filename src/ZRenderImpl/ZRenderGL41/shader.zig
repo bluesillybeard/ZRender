@@ -70,4 +70,25 @@ pub const GL41ShaderProgram = union(enum) {
         gl.deleteProgram(self.loaded.program);
         allocator.destroy(self);
     }
+
+    pub fn setUniforms(self: *GL41ShaderProgram, uniforms: []impl.DrawUniform) void {
+        for(uniforms, 0..) |uniform, i| {
+            const location: gl.GLint = @intCast(i);
+            switch (uniform) {
+                .none => {},
+                .float => |v| gl.programUniform1f(self.loaded.program, location, v),
+                .int => |v| gl.programUniform1i(self.loaded.program, location, v),
+                .uint => |v| gl.programUniform1ui(self.loaded.program, location, v),
+                .vec2 => |v| gl.programUniform2f(self.loaded.program, location, v.x, v.y),
+                .vec2i => |v| gl.programUniform2i(self.loaded.program, location, v.x, v.y),
+                .vec2u => |v| gl.programUniform2ui(self.loaded.program, location, v.x, v.y),
+                .vec3 => |v| gl.programUniform3f(self.loaded.program, location, v.x, v.y, v.z),
+                .vec3i => |v| gl.programUniform3i(self.loaded.program, location, v.x, v.y, v.z),
+                .vec3u => |v| gl.programUniform3ui(self.loaded.program, location, v.x, v.y, v.z),
+                .vec4 => |v| gl.programUniform4f(self.loaded.program, location, v.x, v.y, v.z, v.w),
+                .vec4i => |v| gl.programUniform4i(self.loaded.program, location, v.x, v.y, v.z, v.w),
+                .vec4u => |v| gl.programUniform4ui(self.loaded.program, location, v.x, v.y, v.z, v.w),
+            }
+        }
+    }
 };

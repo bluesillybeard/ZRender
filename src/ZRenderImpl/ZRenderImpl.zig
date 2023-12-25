@@ -197,9 +197,75 @@ pub const DrawInstance = struct {
     }
 };
 
+pub fn Vec(comptime n: comptime_int, comptime T: type) type {
+    switch (n) {
+        1 => return T,
+        2 => return struct {
+            x: T,
+            y: T,
+        },
+        3 => return struct {
+            x: T,
+            y: T,
+            z: T,
+        },
+        4 => return struct {
+            x: T,
+            y: T,
+            z: T,
+            w: T,
+        },
+        else => @compileError("Number of elements must be 1, 2, 3, or 4"),
+    }
+}
+
 pub const DrawUniform = union(enum) {
     /// An empty uniform for skipping locations
     none,
+    /// f32
+    float: Vec(1, f32),
+    /// i32
+    int: Vec(1, i32),
+    /// u32
+    uint: Vec(1, u32),
+    /// Vector of two f32s
+    vec2: Vec(2, f32),
+    /// vector of two i32s
+    vec2i: Vec(2, i32),
+    /// Vector of two u32s
+    vec2u: Vec(2, u32),
+    /// vector of three f32s
+    vec3: Vec(3, f32),
+    /// vector of three i32s
+    vec3i: Vec(3, i32),
+    /// vector of three u32s
+    vec3u: Vec(3, u32),
+    /// vector of foud f32s
+    vec4: Vec(4, f32),
+    /// vector of four i32s
+    vec4i: Vec(4, i32),
+    /// vector of four u32s
+    vec4u: Vec(4, u32),
+    // TODO: matrix types
+    // /// 2x2 matrix
+    // matrix2x2,
+    // /// 2x3 matrix
+    // matrix2x3,
+    // /// 2x4 matrix
+    // matrix2x4,
+    // /// 3x3 matrix
+    // matrix3x3,
+    // /// 3x2 matrix
+    // matrix3x2,
+    // /// 3x4 matrix
+    // matrix3x4,
+    // /// 4x4 matrix
+    // matrix4x4,
+    // /// 4x2 matrix
+    // matrix4x2,
+    // /// 4x3 matrix
+    // matrix4x3,
+    // TODO: textures
 };
 
 pub const Color = struct {

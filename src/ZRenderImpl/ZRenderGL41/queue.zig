@@ -105,13 +105,14 @@ pub const GL41RenderQueue = struct {
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.loaded.indexBufferObject);
             gl.bindBuffer(gl.ARRAY_BUFFER, mesh.loaded.vertexBufferObject);
 
+            shader.setUniforms(instance.uniforms);
+            
             const drawMethod: gl.GLenum = switch (mesh.loaded.type) {
                 .triangles => gl.TRIANGLES,
                 .quads => gl.QUADS,
             };
             const numElements = @min(instance.numElements, mesh.loaded.indexCount - instance.startElement);
             gl.drawElements(drawMethod, @intCast(numElements), gl.UNSIGNED_INT, @ptrFromInt(instance.startElement * @sizeOf(u32)));
-            // TODO: uniforms
         }
         // free the draw objects
         for(draws) |instance| {
