@@ -27,7 +27,6 @@ pub const GL41ShaderProgram = union(enum) {
                     // TODO: get error message and put it somewhere useful
                     return false;
                 }
-
                 const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
                 defer gl.deleteShader(fragmentShader);
                 gl.shaderBinary(1, &fragmentShader, gl.GL_ARB_gl_spirv.SHADER_BINARY_FORMAT_SPIR_V_ARB, init.fragmentSpirvBinary.ptr, @intCast(init.fragmentSpirvBinary.len));
@@ -71,7 +70,7 @@ pub const GL41ShaderProgram = union(enum) {
         allocator.destroy(self);
     }
 
-    pub fn setUniforms(self: *GL41ShaderProgram, uniforms: []impl.DrawUniform) void {
+    pub fn setUniforms(self: *GL41ShaderProgram, uniforms: []const impl.DrawUniform) void {
         for(uniforms, 0..) |uniform, i| {
             const location: gl.GLint = @intCast(i);
             switch (uniform) {

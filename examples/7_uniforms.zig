@@ -19,17 +19,17 @@ pub const Data = struct {
 
 pub const MeshWindow = struct {
     pub fn onRender(instance: ZRender.Instance, window: *ZRender.Window, queue: *ZRender.RenderQueue, delta: i64, time: i64) void {
-        _ = delta;
         _ = time;
+    
     
         var data: *Data = instance.getCustomData();
         if(data.shader == null) {
             data.shader = instance.loadShaderProgram(queue,
                 &[_]ZRender.MeshAttribute{.vec2, .vec3}, //The vec2 is the position input, the vec3 is the color.
                 // This is the compiled output from the glsl shaders.
-                // Look at shaders/4_shader.*, shaders/readme.md for more info.
-                shader_embeds.@"4_shader.vert.spv",
-                shader_embeds.@"4_shader.frag.spv",
+                // Look at shaders/7_uniforms.*, shaders/readme.md for more info.
+                shader_embeds.@"7_uniforms.vert.spv",
+                shader_embeds.@"7_uniforms.frag.spv",
             ).?;
 
             data.mesh = instance.loadMesh(queue, .triangles, .render,
@@ -49,10 +49,12 @@ pub const MeshWindow = struct {
             data.l = true;
         }
         instance.clearToColor(queue, ZRender.Color{.r = 0, .g = 0, .b = 0, .a = 255});
+        data.rotation += @as(f32, @floatFromInt(delta)) / std.time.us_per_s;
+        //std.debug.print("Rotation: {}\n", .{@sin(data.rotation)});
         instance.draw(queue, data.shader.?, &[_]ZRender.DrawInstance{.{
             .numElements=3,
             .mesh = data.mesh.?,
-            .uniforms = &[_]{ZRender.DrawUniform{.float = @floatFromInt(time)}}
+            .uniforms = &[_]ZRender.DrawUniform{.{.float = data.rotation}}
         }});
         instance.presentFramebuffer(queue, true);
 

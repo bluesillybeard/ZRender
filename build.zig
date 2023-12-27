@@ -9,6 +9,8 @@ const examples = [_][2][]const u8 {
     [2][]const u8 {"shader", "examples/4_shader.zig"},
     [2][]const u8 {"meshReplaceData", "examples/5_mesh_replace_data.zig"},
     [2][]const u8 {"meshSubData", "examples/6_mesh_sub_data.zig"},
+    [2][]const u8 {"uniforms", "examples/7_uniforms.zig"},
+
 };
 
 pub fn build(b: *std.Build) !void {
