@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# TODO: figure out how to support both Vulkan and OpenGL.
+# This article may help: https://community.arm.com/arm-community-blogs/b/graphics-gaming-and-vr-blog/posts/spirv-cross-working-with-spir-v-in-your-app
+# It also might be possible to take the OpenGL SPIRV binary and make it compatible with Vulkan.
 fragmentOptions="--target-env opengl -S frag"
 vertexOptions="--target-env opengl -S vert"
 
