@@ -30,13 +30,51 @@ pub const Shader = union(enum) {
 // A handle to an actual mesh on the GPU
 pub const MeshHandle = usize;
 
-/// Instance contains that majority of the public API (well the part of the API that interacts with actual stuff)
+pub const Event = struct {
+    window: WindowHandle,
+    event: WindowEvent,
+};
+
+pub const WindowEvent = union(enum) {
+    exit,
+};
+
+pub const EventError = error {
+    // TODO: more specific error
+    eventError,
+};
+
+pub const FrameArguments = struct {
+    vsync: bool = true,
+};
+
 pub fn MakeInstance(comptime This: type) type {
     return struct {
-        pub fn createWindow(this: This, s: WindowSettings) CreateWindowError!WindowHandle {
-            this.vtable.createWindow(this.object, s);
+        pub inline fn createWindow(this: This, s: WindowSettings) CreateWindowError!WindowHandle {
+            return this.vtable.createWindow(this.object, s);
+        }
+
+        pub inline fn deinit(this: This) void {
+            this.vtable.deinit(this.object);
+        }
+
+        pub inline fn deinitWindow(this: This, window: WindowHandle) void {
+            this.vtable.deinitWindow(this.object, window);
+        }
+
+        pub inline fn pollEvents(this: This) void {
+            this.vtable.pollEvents(this.object);
+        }
+
+        pub inline fn enumerateEvent(this: This) EventError!?Event {
+            return this.vtable.enumerateEvent(this.object);
+        }
+
+        pub inline fn runFrame(this: This, window: WindowHandle, args: FrameArguments) void {
+            this.vtable.runFrame(this.object, window, args);
         }
     };
 }
 
+/// Instance contains that majority of the public API (well the part of the API that interacts with actual stuff)
 pub const Instance = interface.MakeInterface(MakeInstance, .{});
