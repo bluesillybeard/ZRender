@@ -40,9 +40,8 @@ The usage of the API:
     - one draw queue can be used on multiple windows
     - a draw queue can be reused between frames.
 
-A draw object is basically just a list of mesh-shader pairs. The list is ordered so things are drawn in a certain order.
-- It's technically two lists where the index of one corresponds to the index of another.
-- A draw object also contains transform information (rotation, scale, shear, etc)
+A draw object is basically just a shader, and a list of meshes. The list is ordered so things are drawn in a certain order.
+- Counterintuitively, the shader also contains the transform information. This is because it allows each shader to take its own form of transformation data, which might be annoying to users, but I believe the benefits outweight the drawbacks.
 
 A mesh object is an opaque ID that references an actual object on the GPU
 - For example, in the OpenGL backend, it is a refernce to an object that contains the vertex buffer object, an element buffer objects, buffer sizes, and some metadata.

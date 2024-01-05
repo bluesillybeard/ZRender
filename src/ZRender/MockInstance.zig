@@ -17,16 +17,15 @@ pub const MockInstance = struct {
     }
     pub fn createWindow(this: *MockInstance, s: Instance.WindowSettings) Instance.CreateWindowError!Instance.WindowHandle {
         // create a random number to serve as the ID
-        const n = this.rng.next();
+        const n: usize = @intCast(this.rng.next());
         std.debug.print("createWindow {} -> {}\n", .{s, n});
         this.lastWindow = @intCast(n);
-        return @intCast(n);
+        return n;
     }
 
     pub fn deinit(this: *MockInstance) void {
-        _ = this;
         std.debug.print("deinit\n", .{});
-    
+        this.allocator.destroy(this);
     }
 
     pub fn deinitWindow(this: *MockInstance, window: Instance.WindowHandle) void {
@@ -56,5 +55,18 @@ pub const MockInstance = struct {
     pub fn runFrame(this: *MockInstance, window: Instance.WindowHandle, args: Instance.FrameArguments) void {
         _ = this;
         std.debug.print("runFrame {} {}\n", .{window, args});
+    }
+
+    pub fn createMeshf32(this: *MockInstance, vertices: []const f32, indices: []const u32) Instance.MeshHandle {
+        // TODO: for methods that recieve a mesh, make sure that mesh is one that is still valid.
+        // create a random number to serve as the ID
+        const n: usize = @intCast(this.rng.next());
+        std.debug.print("createMeshf32 {any} {any} -> {}\n", .{vertices, indices, n});
+        return n;
+    }
+
+    pub fn submitDrawObject(this: *MockInstance, window: Instance.WindowHandle, object: Instance.DrawObject) void {
+        _ = this;
+        std.debug.print("submitDrawObject {} {}\n", .{window, object});
     }
 };
