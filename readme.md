@@ -92,3 +92,8 @@ Runtime dependencies:
 - Either Vulkan or OpenGL 4.1
 Compile time dependencies
 - Zig 0.12.0-dev.1819+5c1428ea9 (doesn't need to be in path, just used to run the build.zig)
+
+Notes about documentation:
+- All instance methods must be called from the main thread, unless explicitly stated otherwise
+- Documentation is sparce at the moment, as the library is still fresh and documentation is not yet written
+

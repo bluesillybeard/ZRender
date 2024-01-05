@@ -1,4 +1,5 @@
 const interface = @import("interface");
+const std = @import("std");
 
 // A bunch of small types
 
@@ -62,6 +63,17 @@ pub const MeshHandle = usize;
 pub const DrawObject = struct {
     draws: []const MeshHandle,
     shader: Shader,
+
+    pub fn duplicate(this: DrawObject, allocator: std.mem.Allocator) !DrawObject {
+        return DrawObject{
+            .draws  = allocator.dupe(MeshHandle, this.draws),
+            .shader = this.shader,
+        };
+    }
+
+    pub fn deinit(this: DrawObject, allocator: std.mem.Allocator) void {
+        allocator.free(this.draws);
+    }
 };
 pub const Event = struct {
     window: WindowHandle,
@@ -88,14 +100,12 @@ pub fn MakeInstance(comptime This: type) type {
             return this.vtable.createWindow(this.object, s);
         }
 
-        /// Destroys and instance.
+        /// Destroys an instance.
         pub inline fn deinit(this: This) void {
             this.vtable.deinit(this.object);
         }
 
         /// Closes and destroys a window.
-        /// 
-        /// MUST be called from the main thread
         pub inline fn deinitWindow(this: This, window: WindowHandle) void {
             this.vtable.deinitWindow(this.object, window);
         }
@@ -106,8 +116,6 @@ pub fn MakeInstance(comptime This: type) type {
         /// - poll events for every window and store them into a buffer
         /// - handle certain events directly, such as framebuffer resizing
         /// - prepare for events to be enumerated
-        /// 
-        /// MUST be called from the main thread
         pub inline fn pollEvents(this: This) void {
             this.vtable.pollEvents(this.object);
         }
@@ -115,8 +123,6 @@ pub fn MakeInstance(comptime This: type) type {
         /// Use in a while loop to enumerate events.
         /// If there are no events left, returns null.
         /// Will return an error if pollEvents was never called, or if an invalid event is recieved.
-        /// 
-        /// MUST be called from the main thread.
         pub inline fn enumerateEvent(this: This) EventError!?Event {
             return this.vtable.enumerateEvent(this.object);
         }
@@ -127,8 +133,6 @@ pub fn MakeInstance(comptime This: type) type {
         /// - run each submitted draw list
         /// - swap the framebuffer
         /// - resize the framebuffer if it needs to be
-        /// 
-        /// MUST be called from the main thread.
         pub inline fn runFrame(this: This, window: WindowHandle, args: FrameArguments) void {
             this.vtable.runFrame(this.object, window, args);
         }
