@@ -78,11 +78,6 @@ pub fn generateVSCodeFiles(allocator: std.mem.Allocator) anyerror!struct {launch
     // TODO: It might be worth generating tasks/launch configs for other IDEs as well,
     // it depends on if anyone other than me actually uses this project.
 
-    // Building a string in zig is a bit annoying at the moment.
-    // So, some whackyness is required.
-    // I would love to use the '++' operator, but making it work with the restrictions of comptime
-    // was becoming too much of a hassle to be worth it.
-
     // For the sake of simplicity, just allocate a massive buffer that's larger than the file could ever reasonably be.
     var launchBuffer = try allocator.alloc(u8, 1024 + 1024 * examples.len);
     var tasksBuffer = try allocator.alloc(u8, 1024 + 1024 * examples.len);

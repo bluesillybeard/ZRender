@@ -7,7 +7,9 @@ pub const Color = struct {
     r: f32, g: f32, b: f32, a: f32,
 };
 
-pub const Matrix3 = struct {
+// It is extern so that implementations can just yeet the data into the backend directly
+// instead of having to convert them into a C compatible form.
+pub const Matrix3 = extern struct {
     // X      Y         Z
     m00: f32, m01: f32, m02: f32, //X
     m10: f32, m11: f32, m12: f32, //Y
@@ -60,13 +62,22 @@ pub const Shader = union(enum) {
 // A handle to an actual mesh on the GPU
 pub const MeshHandle = usize;
 
+pub const MeshUsageHint = enum {
+    /// The mesh is basically never used
+    cold,
+    /// The mesh is drawn
+    draw,
+    /// the mesh is drawn and written to.
+    draw_write,
+};
+
 pub const DrawObject = struct {
     draws: []const MeshHandle,
     shader: Shader,
 
     pub fn duplicate(this: DrawObject, allocator: std.mem.Allocator) !DrawObject {
         return DrawObject{
-            .draws  = allocator.dupe(MeshHandle, this.draws),
+            .draws  = try allocator.dupe(MeshHandle, this.draws),
             .shader = this.shader,
         };
     }
@@ -80,6 +91,7 @@ pub const Event = struct {
     event: WindowEvent,
 };
 
+// various errors
 pub const WindowEvent = union(enum) {
     exit,
 };
@@ -87,6 +99,10 @@ pub const WindowEvent = union(enum) {
 pub const EventError = error {
     // TODO: more specific error
     eventError,
+};
+
+pub const CreateMeshError = error {
+    createMeshError,
 };
 
 pub const FrameArguments = struct {
@@ -139,8 +155,8 @@ pub fn MakeInstance(comptime This: type) type {
         // TODO: more mesh creation functions for various types of meshes
 
         /// Creates a mesh from a vertex array of floats and indices.
-        pub inline fn createMeshf32(this: This, vertices: []const f32, indices: []const u32) MeshHandle {
-            return this.vtable.createMeshf32(this.object, vertices, indices);
+        pub inline fn createMeshf32(this: This, vertices: []const f32, indices: []const u32, hint: MeshUsageHint) CreateMeshError!MeshHandle {
+            return this.vtable.createMeshf32(this.object, vertices, indices, hint);
         }
 
         /// submits a single draw object to a window

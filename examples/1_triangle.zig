@@ -17,8 +17,8 @@ pub fn main() !void {
     defer instance.deinitWindow(window);
 
     // Create a draw object with a single solid color triangle
-    const drawObject = ZRender.DrawObject{
-        .draws = &[1]ZRender.MeshHandle{instance.createMeshf32(&[_]f32{0.5, -0.5, -0.5, -0.5, 0.5, 0.5}, &[_]u32{0, 1, 2})},
+    const triangle = ZRender.DrawObject{
+        .draws = &[1]ZRender.MeshHandle{try instance.createMeshf32(&[_]f32{0.5, -0.5, -0.5, -0.5, 0.5, 0.5}, &[_]u32{0, 1, 2}, .draw)},
         .shader = .{.SolidColor = .{.color = .{.r = 1, .g = 1, .b = 1, .a = 1}, .transform = ZRender.Transform2D.Identity}},
     };
     
@@ -34,7 +34,7 @@ pub fn main() !void {
         }
         
         // submit the trangle
-        instance.submitDrawObject(window, drawObject);
+        instance.submitDrawObject(window, triangle);
 
         // This function would run all of the draw lists submitted to it,
         // Then it presents the frame buffer (and does a few other things)

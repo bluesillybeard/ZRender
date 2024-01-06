@@ -27,17 +27,42 @@ const Window = struct {
     }
 };
 
+const Mesh = struct {
+    vertexBuffer: gl.GLuint,
+    indexBuffer: gl.GLuint,
+    numIndices: usize,
+    usageHint: Instance.MeshUsageHint,
+};
+
+const numShaderEnums: usize = blk: {
+    var n = 0;
+    for(@typeInfo(@typeInfo(Instance.Shader).Union.tag_type.?).Enum.fields) |field| {
+        if(field.value > n) {
+            n = field.value;
+        }
+    }
+    break :blk n+1;
+};
+
+const Shader = struct {
+    program: gl.GLuint,
+    vertexArrayObject: gl.GLuint,
+};
+
 pub const GL41Instance = struct {
     allocator: std.mem.Allocator,
     context: ?sdl.gl.Context,
     // This is a sparse list of windows, so the window handle is the same as an index into this list.
     windows: std.ArrayList(?Window),
+    // The index into this array is the tag index from the shader of a draw object
+    shaderPrograms: [numShaderEnums] ?Shader,
     pub fn init(allocator: std.mem.Allocator) !*GL41Instance {
         const self = try allocator.create(GL41Instance);
         self.* = .{
             .allocator = allocator,
             .context = null,
             .windows = std.ArrayList(?Window).init(allocator),
+            .shaderPrograms = [_]?Shader{null} ** numShaderEnums,
         };
         return self;
     }
@@ -67,6 +92,9 @@ pub const GL41Instance = struct {
         // Because OpenGL is stupid and annoying, it HAS to be attached to a window,
         // which is why it is initialized after the window, not before.
         if(this.context == null) {
+            sdl.gl.setAttribute(.{.context_major_version = 4}) catch return Instance.CreateWindowError.createWindowError;
+            sdl.gl.setAttribute(.{.context_minor_version = 1}) catch return Instance.CreateWindowError.createWindowError;
+            sdl.gl.setAttribute(.{.context_profile_mask = .core}) catch return Instance.CreateWindowError.createWindowError;
             this.context = sdl.gl.createContext(window.sdlWindow) catch return Instance.CreateWindowError.createWindowError;
             gl.load(void{}, loadProc) catch return Instance.CreateWindowError.createWindowError;
         }
@@ -119,30 +147,51 @@ pub const GL41Instance = struct {
     }
 
     pub fn runFrame(this: *GL41Instance, window: Instance.WindowHandle, args: Instance.FrameArguments) void {
-        _ = args;
     
-        if(this.windows.items[window]) |windowObj| {
+        if(this.windows.items[window]) |*windowObj| {
             sdl.gl.makeCurrent(this.context.?, windowObj.sdlWindow) catch @panic("Failed to make window current");
             gl.clear(gl.COLOR_BUFFER_BIT);
-            // TODO: actually run the draw objects
+            for(windowObj.draws.items) |d| {
+                this.drawDrawObject(d);
+                d.deinit(this.allocator);
+            }
+            windowObj.draws.clearRetainingCapacity();
+            sdl.gl.setSwapInterval(if(args.vsync) .adaptive_vsync else .immediate) catch unreachable;
             sdl.gl.swapWindow(windowObj.sdlWindow);
         }
     }
 
-    pub fn createMeshf32(this: *GL41Instance, vertices: []const f32, indices: []const u32) Instance.MeshHandle {
-        _ = this;
-        _ = vertices;
-        _ = indices;
+    pub fn createMeshf32(this: *GL41Instance, vertices: []const f32, indices: []const u32, hint: Instance.MeshUsageHint) Instance.CreateMeshError!Instance.MeshHandle {
+        const usage: gl.GLenum = switch (hint) {
+            .cold => gl.STATIC_DRAW,
+            .draw => gl.STATIC_DRAW,
+            .draw_write => gl.DYNAMIC_DRAW,
+        };
 
-        notImplemented();
+        var buffers: [2]gl.GLuint = undefined; 
+        gl.genBuffers(2, &buffers);
+        const vertexBuffer = buffers[0];
+        const indexBuffer = buffers[1];
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, @intCast(vertices.len * @sizeOf(f32)), vertices.ptr, usage);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, @intCast(indices.len * @sizeOf(u32)), indices.ptr, usage);
+
+        // TODO: store meshes in contiguous memory instead of allocating them like this
+        const mesh = this.allocator.create(Mesh) catch return Instance.CreateMeshError.createMeshError;
+        mesh.* = Mesh{
+            .indexBuffer = indexBuffer,
+            .vertexBuffer = vertexBuffer,
+            .numIndices = indices.len,
+            .usageHint = hint,
+        };
+        return @intFromPtr(mesh);
     }
 
     pub fn submitDrawObject(this: *GL41Instance, window: Instance.WindowHandle, object: Instance.DrawObject) void {
-        _ = this;
-        _ = window;
-        _ = object;
-
-        notImplemented();
+        if(this.windows.items[window]) |*windowObj| {
+            windowObj.draws.append(object.duplicate(this.allocator) catch unreachable ) catch unreachable;
+        }
     }
 
     pub fn getWindowFromSdlId(this: *GL41Instance, wid: u32) ?Instance.WindowHandle {
@@ -160,7 +209,101 @@ pub const GL41Instance = struct {
         return null;
     }
 
-    pub inline fn notImplemented() noreturn {
+    fn drawDrawObject(this: *GL41Instance, object: Instance.DrawObject) void {
+        this.loadAndBindShader(object.shader);
+        for(object.draws) |meshUncast| {
+            const mesh: *Mesh = @ptrFromInt(meshUncast);
+            gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+            gl.drawElements(gl.TRIANGLES, @intCast(mesh.numIndices), gl.UNSIGNED_INT, null);
+        }
+    }
+
+    fn loadAndBindShader(this: *GL41Instance, shader: Instance.Shader) void {
+        switch (shader) {
+            .SolidColor => |solidColor| {
+
+                // TODO: look at the assembly for this part and make sure it's inlining it to always be SolidColor (aka zero)
+                //  Do that once there are multile possible shaders
+                const shaderIndex = @intFromEnum(shader);
+
+                var shaderObj = this.shaderPrograms[shaderIndex];
+                // If the shader isn't compiled, then compile it
+                if(shaderObj == null) {
+                    const vertexGLSL = @embedFile("GL41/shaders/SolidColor.vertex.glsl");
+                    const fragmentGLSL = @embedFile("GL41/shaders/SolidColor.fragment.glsl");
+                    const program = compileShader(vertexGLSL, fragmentGLSL);
+
+                    var vertexArrayObject: gl.GLuint = undefined;
+                    gl.genVertexArrays(1, &vertexArrayObject);
+                    gl.bindVertexArray(vertexArrayObject);
+                    gl.vertexAttribPointer(0, 2, gl.FLOAT, 0, 0, null);
+
+                    shaderObj = Shader{
+                        .program = program,
+                        .vertexArrayObject = vertexArrayObject,
+                    };
+                    this.shaderPrograms[shaderIndex] = shaderObj;
+                }
+
+                //shaderObj is guaranteed to not be null at this point.
+                const program = shaderObj.?.program;
+                gl.useProgram(program);
+                gl.programUniform4f(program, 0, solidColor.color.r, solidColor.color.g, solidColor.color.b, solidColor.color.a);
+                // In this engine, matrices are stored in row-major order.
+                // OpenGL is freakishly weird and does it the other way around, with column major order.
+                // Thankfully, OpenGL takes a boolean when recieving matrix uniforms that will automatically convert it.
+                gl.programUniformMatrix3fv(program, 1, 1, 1, @ptrCast(&solidColor.transform.matrix));
+            }
+        }
+    }
+
+    /// Loads and compiles a shader program.
+    inline fn compileShader(vertexGLSL: []const u8, fragmentGLSL: []const u8) gl.GLuint {
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        defer gl.deleteShader(vertexShader);
+        const vertexLen: gl.GLint = @intCast(vertexGLSL.len);
+        gl.shaderSource(vertexShader, 1, &vertexGLSL.ptr, &vertexLen);
+        gl.compileShader(vertexShader);
+
+        var success: gl.GLint = undefined;
+        gl.getShaderiv(vertexShader, gl.COMPILE_STATUS, &success);
+        if(success  == 0){
+            var buffer = [_]u8{0} ** 512;
+            gl.getShaderInfoLog(vertexShader, 512, null, &buffer);
+            std.debug.print("{s}", .{&buffer});
+        }
+
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        defer gl.deleteShader(fragmentShader);
+        const fragmentLen: gl.GLint = @intCast(fragmentGLSL.len);
+        gl.shaderSource(fragmentShader, 1, &fragmentGLSL.ptr, &fragmentLen);
+        gl.compileShader(fragmentShader);
+
+        gl.getShaderiv(fragmentShader, gl.COMPILE_STATUS, &success);
+        if(success  == 0){
+            var buffer = [_]u8{0} ** 512;
+            gl.getShaderInfoLog(fragmentShader, 512, null, &buffer);
+            std.debug.print("{s}", .{&buffer});
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        defer gl.detachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        defer gl.detachShader(program, fragmentShader);
+        gl.linkProgram(program);
+
+        gl.getProgramiv(program, gl.LINK_STATUS, &success);
+        if(success  == 0){
+            var buffer = [_]u8{0} ** 512;
+            gl.getProgramInfoLog(program, 512, null, &buffer);
+            std.debug.print("{s}", .{&buffer});
+        }
+        return program;
+    }
+
+    inline fn notImplemented() noreturn {
         @panic("Not implemented on the OpenGL 4.1 backend");
     }
 
