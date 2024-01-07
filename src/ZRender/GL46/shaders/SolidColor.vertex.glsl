@@ -1,4 +1,4 @@
-#version 410
+#version 460
 
 layout(location = 0) uniform vec4 color;
 layout(location = 1) uniform mat3 transform;

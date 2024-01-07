@@ -1,8 +1,8 @@
 const std = @import("std");
 const sdl = @import("sdl");
-const gl = @import("GL41/GL41Bind.zig");
+const gl = @import("GL46/GL46Bind.zig");
 const Instance = @import("Instance.zig");
-// Implementation of Instance for OpenGL 4.1 and SDL2
+// Implementation of Instance for OpenGL 4.6 and SDL2
 
 const Window = struct {
     sdlWindow: sdl.Window,
@@ -49,15 +49,15 @@ const Shader = struct {
     vertexArrayObject: gl.GLuint,
 };
 
-pub const GL41Instance = struct {
+pub const GL46Instance = struct {
     allocator: std.mem.Allocator,
     context: ?sdl.gl.Context,
     // This is a sparse list of windows, so the window handle is the same as an index into this list.
     windows: std.ArrayList(?Window),
     // The index into this array is the tag index from the shader of a draw object
     shaderPrograms: [numShaderEnums] ?Shader,
-    pub fn init(allocator: std.mem.Allocator) !*GL41Instance {
-        const self = try allocator.create(GL41Instance);
+    pub fn init(allocator: std.mem.Allocator) !*GL46Instance {
+        const self = try allocator.create(GL46Instance);
         self.* = .{
             .allocator = allocator,
             .context = null,
@@ -67,7 +67,7 @@ pub const GL41Instance = struct {
         return self;
     }
 
-    pub fn createWindow(this: *GL41Instance, s: Instance.WindowSettings) Instance.CreateWindowError!Instance.WindowHandle {
+    pub fn createWindow(this: *GL46Instance, s: Instance.WindowSettings) Instance.CreateWindowError!Instance.WindowHandle {
         // find an empty spot in the list of windows
         var id: usize = undefined;
         // If the list of windows has no items, make a spot
@@ -93,7 +93,7 @@ pub const GL41Instance = struct {
         // which is why it is initialized after the window, not before.
         if(this.context == null) {
             sdl.gl.setAttribute(.{.context_major_version = 4}) catch return Instance.CreateWindowError.createWindowError;
-            sdl.gl.setAttribute(.{.context_minor_version = 1}) catch return Instance.CreateWindowError.createWindowError;
+            sdl.gl.setAttribute(.{.context_minor_version = 6}) catch return Instance.CreateWindowError.createWindowError;
             sdl.gl.setAttribute(.{.context_profile_mask = .core}) catch return Instance.CreateWindowError.createWindowError;
             this.context = sdl.gl.createContext(window.sdlWindow) catch return Instance.CreateWindowError.createWindowError;
             gl.load(void{}, loadProc) catch return Instance.CreateWindowError.createWindowError;
@@ -101,13 +101,13 @@ pub const GL41Instance = struct {
         return id;
     }
 
-    pub fn deinit(this: *GL41Instance) void {
+    pub fn deinit(this: *GL46Instance) void {
         this.windows.deinit();
         sdl.quit();
         this.allocator.destroy(this);
     }
 
-    pub fn deinitWindow(this: *GL41Instance, window: Instance.WindowHandle) void {
+    pub fn deinitWindow(this: *GL46Instance, window: Instance.WindowHandle) void {
         // get the actual window object
         const windowObj = this.windows.items[window];
         // remove the window from the list
@@ -118,14 +118,14 @@ pub const GL41Instance = struct {
         }
     }
 
-    pub fn pollEvents(this: *GL41Instance) void {
+    pub fn pollEvents(this: *GL46Instance) void {
         _ = this;
 
         // with SDL, polling the events ahead of time is more or less useless.
         // The function exists in case of a future supported platform where polling the events ahead of time is useful.
     }
 
-    pub fn enumerateEvent(this: *GL41Instance) Instance.EventError!?Instance.Event {
+    pub fn enumerateEvent(this: *GL46Instance) Instance.EventError!?Instance.Event {
         while (sdl.pollEvent()) |event| {
             // TODO: all the events
             switch (event) {
@@ -146,11 +146,11 @@ pub const GL41Instance = struct {
         return null;
     }
 
-    pub fn runFrame(this: *GL41Instance, window: Instance.WindowHandle, args: Instance.FrameArguments) void {
+    pub fn runFrame(this: *GL46Instance, window: Instance.WindowHandle, args: Instance.FrameArguments) void {
     
         if(this.windows.items[window]) |*windowObj| {
             sdl.gl.makeCurrent(this.context.?, windowObj.sdlWindow) catch @panic("Failed to make window current");
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            //gl.clear(gl.COLOR_BUFFER_BIT);
             for(windowObj.draws.items) |d| {
                 this.drawDrawObject(d);
                 d.deinit(this.allocator);
@@ -161,7 +161,7 @@ pub const GL41Instance = struct {
         }
     }
 
-    pub fn createMeshf32(this: *GL41Instance, vertices: []const f32, indices: []const u32, hint: Instance.MeshUsageHint) Instance.CreateMeshError!Instance.MeshHandle {
+    pub fn createMeshf32(this: *GL46Instance, vertices: []const f32, indices: []const u32, hint: Instance.MeshUsageHint) Instance.CreateMeshError!Instance.MeshHandle {
         const usage: gl.GLenum = switch (hint) {
             .cold => gl.STATIC_DRAW,
             .draw => gl.STATIC_DRAW,
@@ -188,13 +188,13 @@ pub const GL41Instance = struct {
         return @intFromPtr(mesh);
     }
 
-    pub fn submitDrawObject(this: *GL41Instance, window: Instance.WindowHandle, object: Instance.DrawObject) void {
+    pub fn submitDrawObject(this: *GL46Instance, window: Instance.WindowHandle, object: Instance.DrawObject) void {
         if(this.windows.items[window]) |*windowObj| {
             windowObj.draws.append(object.duplicate(this.allocator) catch unreachable ) catch unreachable;
         }
     }
 
-    pub fn getWindowFromSdlId(this: *GL41Instance, wid: u32) ?Instance.WindowHandle {
+    pub fn getWindowFromSdlId(this: *GL46Instance, wid: u32) ?Instance.WindowHandle {
         // get the window handle from the SDL window ID
         const sdlWindowOrNone = sdl.Window.fromID(wid);
         if (sdlWindowOrNone) |sdlWindow| {
@@ -209,7 +209,7 @@ pub const GL41Instance = struct {
         return null;
     }
 
-    fn drawDrawObject(this: *GL41Instance, object: Instance.DrawObject) void {
+    fn drawDrawObject(this: *GL46Instance, object: Instance.DrawObject) void {
         this.loadAndBindShader(object.shader);
         for(object.draws) |meshUncast| {
             const mesh: *Mesh = @ptrFromInt(meshUncast);
@@ -219,7 +219,7 @@ pub const GL41Instance = struct {
         }
     }
 
-    fn loadAndBindShader(this: *GL41Instance, shader: Instance.Shader) void {
+    fn loadAndBindShader(this: *GL46Instance, shader: Instance.Shader) void {
         switch (shader) {
             .SolidColor => |solidColor| {
 
@@ -230,8 +230,8 @@ pub const GL41Instance = struct {
                 var shaderObj = this.shaderPrograms[shaderIndex];
                 // If the shader isn't compiled, then compile it
                 if(shaderObj == null) {
-                    const vertexGLSL = @embedFile("GL41/shaders/SolidColor.vertex.glsl");
-                    const fragmentGLSL = @embedFile("GL41/shaders/SolidColor.fragment.glsl");
+                    const vertexGLSL = @embedFile("GL46/shaders/SolidColor.vertex.glsl");
+                    const fragmentGLSL = @embedFile("GL46/shaders/SolidColor.fragment.glsl");
                     const program = compileShader(vertexGLSL, fragmentGLSL);
 
                     var vertexArrayObject: gl.GLuint = undefined;
@@ -249,11 +249,13 @@ pub const GL41Instance = struct {
                 //shaderObj is guaranteed to not be null at this point.
                 const program = shaderObj.?.program;
                 gl.useProgram(program);
-                gl.programUniform4f(program, 0, solidColor.color.r, solidColor.color.g, solidColor.color.b, solidColor.color.a);
+                gl.uniform4f(0, solidColor.color.r, solidColor.color.g, solidColor.color.b, solidColor.color.a);
                 // In this engine, matrices are stored in row-major order.
                 // OpenGL is freakishly weird and does it the other way around, with column major order.
                 // Thankfully, OpenGL takes a boolean when recieving matrix uniforms that will automatically convert it.
-                gl.programUniformMatrix3fv(program, 1, 1, 1, @ptrCast(&solidColor.transform.matrix));
+                gl.uniformMatrix3fv(1, 1, 1, @ptrCast(&solidColor.transform.matrix));
+                gl.bindVertexArray(shaderObj.?.vertexArrayObject);
+                gl.enableVertexAttribArray(0);
             }
         }
     }
@@ -304,7 +306,7 @@ pub const GL41Instance = struct {
     }
 
     inline fn notImplemented() noreturn {
-        @panic("Not implemented on the OpenGL 4.1 backend");
+        @panic("Not implemented on the OpenGL 4.6 backend");
     }
 
     fn loadProc(ctx: void, name: [:0]const u8) ?gl.FunctionPointer {

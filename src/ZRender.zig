@@ -1,7 +1,7 @@
 const std = @import("std");
 const Instance = @import("ZRender/Instance.zig");
 const MockInstance = @import("ZRender/MockInstance.zig").MockInstance;
-const GL41Instance = @import("ZRender/GL41Instance.zig").GL41Instance;
+const GL46Instance = @import("ZRender/GL46Instance.zig").GL46Instance;
 // ZRender public API
 
 // forward declarations
@@ -21,7 +21,7 @@ pub const FrameArguments = Instance.FrameArguments;
 
 pub const InstanceArgs = struct {
     enableMock: bool = false,
-    enableGL41: bool = true,
+    enableGL46: bool = true,
     allocator: std.mem.Allocator,
 };
 
@@ -33,9 +33,9 @@ pub fn initInstance(args: InstanceArgs) !Instance.Instance {
         return Instance.Instance.initFromImplementer(MockInstance, instance);
     }
     // TODO: backend chaining
-    if(args.enableGL41) {
-        const instance = try GL41Instance.init(args.allocator);
-        return Instance.Instance.initFromImplementer(GL41Instance, instance);
+    if(args.enableGL46) {
+        const instance = try GL46Instance.init(args.allocator);
+        return Instance.Instance.initFromImplementer(GL46Instance, instance);
     }
     
     @panic("No supported backends found!");
