@@ -188,6 +188,12 @@ pub const GL46Instance = struct {
         return @intFromPtr(mesh);
     }
 
+    pub fn deinitMesh(this: *GL46Instance, meshUncast: Instance.MeshHandle) void {
+        const mesh: *Mesh = @ptrFromInt(meshUncast);
+        gl.deleteBuffers(2, &[2]gl.GLuint{mesh.indexBuffer, mesh.vertexBuffer});
+        this.allocator.destroy(mesh);
+    }
+
     pub fn submitDrawObject(this: *GL46Instance, window: Instance.WindowHandle, object: Instance.DrawObject) void {
         if(this.windows.items[window]) |*windowObj| {
             windowObj.draws.append(object.duplicate(this.allocator) catch unreachable ) catch unreachable;
@@ -314,3 +320,6 @@ pub const GL46Instance = struct {
         return sdl.gl.getProcAddress(name);
     }
 };
+
+// TODO: these things:
+// - combine draw calls together as much as possible (instanced drawing, or maybe multidraw)

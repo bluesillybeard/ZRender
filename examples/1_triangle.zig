@@ -17,11 +17,14 @@ pub fn main() !void {
     defer instance.deinitWindow(window);
 
     // Create a draw object with a single solid color triangle
+    const mesh = try instance.createMeshf32(&[_]f32{0.5, -0.5, -0.5, -0.5, 0.5, 0.5}, &[_]u32{0, 1, 2}, .draw);
     const triangle = ZRender.DrawObject{
-        .draws = &[1]ZRender.MeshHandle{try instance.createMeshf32(&[_]f32{0.5, -0.5, -0.5, -0.5, 0.5, 0.5}, &[_]u32{0, 1, 2}, .draw)},
+        .draws = &[1]ZRender.MeshHandle{mesh},
         .shader = .{.SolidColor = .{.color = .{.r = 1, .g = 1, .b = 1, .a = 1}, .transform = ZRender.Transform2D.Identity}},
     };
     
+    defer instance.deinitMesh(mesh);
+
     var running = true;
     // main loop
     while(running) {

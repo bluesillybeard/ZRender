@@ -65,6 +65,12 @@ pub const MockInstance = struct {
         return n;
     }
 
+    pub fn deinitMesh(this: *MockInstance, meshUncast: Instance.MeshHandle) void {
+        _ = this;
+        std.debug.print("deinitMesh {}\n", .{meshUncast});
+    }
+
+
     pub fn submitDrawObject(this: *MockInstance, window: Instance.WindowHandle, object: Instance.DrawObject) void {
         _ = this;
         std.debug.print("submitDrawObject {} {}\n", .{window, object});

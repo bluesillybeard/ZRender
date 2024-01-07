@@ -159,6 +159,11 @@ pub fn MakeInstance(comptime This: type) type {
             return this.vtable.createMeshf32(this.object, vertices, indices, hint);
         }
 
+        /// Deletes a mesh
+        pub inline fn deinitMesh(this: This, mesh: MeshHandle) void {
+            this.vtable.deinitMesh(this.object, mesh);
+        }
+
         /// submits a single draw object to a window
         pub inline fn submitDrawObject(this: This, window: WindowHandle, object: DrawObject) void {
             this.vtable.submitDrawObject(this.object, window, object);
