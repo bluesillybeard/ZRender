@@ -37,6 +37,8 @@ pub const GL46Instance = struct {
             // If we're at the last item and still haven't found a spot, make one
             if (i == this.windows.items.len - 1) {
                 this.windows.append(null) catch return Instance.CreateWindowError.createWindowError;
+                id = i + 1;
+                break;
             }
         }
         // create the window
@@ -86,7 +88,8 @@ pub const GL46Instance = struct {
             switch (event) {
                 .window => |windowEvent| {
                     const window = this.getWindowFromSdlId(windowEvent.window_id);
-                    if(window == null) return Instance.EventError.eventError;
+                    // TODO: figure out why windows are just becoming null
+                    if(window == null) continue;//return Instance.EventError.eventError;
                     if (windowEvent.type == .close) {
                         return Instance.Event{
                             .window = window.?,
@@ -105,7 +108,7 @@ pub const GL46Instance = struct {
     
         if(this.windows.items[window]) |*windowObj| {
             sdl.gl.makeCurrent(this.context.?, windowObj.sdlWindow) catch @panic("Failed to make window current");
-            //gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.clear(gl.COLOR_BUFFER_BIT);
             for(windowObj.draws.items) |d| {
                 this.drawDrawObject(d);
                 d.deinit(this.allocator);
@@ -156,14 +159,12 @@ pub const GL46Instance = struct {
     }
 
     pub fn getWindowFromSdlId(this: *GL46Instance, wid: u32) ?Instance.WindowHandle {
-        // get the window handle from the SDL window ID
-        const sdlWindowOrNone = sdl.Window.fromID(wid);
-        if (sdlWindowOrNone) |sdlWindow| {
-            for (this.windows.items, 0..) |windowOrNone, windowId| {
-                if (windowOrNone) |window| {
-                    if (window.sdlWindow.ptr == sdlWindow.ptr) {
-                        return windowId;
-                    }
+        for(this.windows.items, 0..) |windowOrNone, handle| {
+            if(windowOrNone) |window| {
+                // The SDL wrapper doesn't have this function yet. Luckily, we can directly call the C function.
+                const window_id = sdl.c.SDL_GetWindowID(window.sdlWindow.ptr);
+                if(window_id == wid) {
+                    return handle;
                 }
             }
         }
