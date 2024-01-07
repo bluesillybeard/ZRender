@@ -88,8 +88,7 @@ pub const GL46Instance = struct {
             switch (event) {
                 .window => |windowEvent| {
                     const window = this.getWindowFromSdlId(windowEvent.window_id);
-                    // TODO: figure out why windows are just becoming null
-                    if(window == null) continue;//return Instance.EventError.eventError;
+                    if(window == null) return Instance.EventError.eventError;
                     if (windowEvent.type == .close) {
                         return Instance.Event{
                             .window = window.?,
