@@ -4,51 +4,6 @@ const gl = @import("GL46/GL46Bind.zig");
 const Instance = @import("Instance.zig");
 // Implementation of Instance for OpenGL 4.6 and SDL2
 
-const Window = struct {
-    sdlWindow: sdl.Window,
-    // draws is entirely owned by the Window.
-    // They are copies of the ones given from the submitDraw method
-    draws: std.ArrayList(Instance.DrawObject),
-
-    pub fn init(settings: Instance.WindowSettings, allocator: std.mem.Allocator) !Window {
-        return Window{
-            // TODO: position
-            .sdlWindow = try sdl.createWindow(settings.name, .default, .default, @intCast(settings.width), @intCast(settings.height), .{
-                .resizable = settings.resizable,
-                .context = .opengl,
-            }),
-            .draws = std.ArrayList(Instance.DrawObject).init(allocator),
-        };
-    }
-
-    pub fn deinit(this: Window) void {
-        this.sdlWindow.destroy();
-        this.draws.deinit();
-    }
-};
-
-const Mesh = struct {
-    vertexBuffer: gl.GLuint,
-    indexBuffer: gl.GLuint,
-    numIndices: usize,
-    usageHint: Instance.MeshUsageHint,
-};
-
-const numShaderEnums: usize = blk: {
-    var n = 0;
-    for(@typeInfo(@typeInfo(Instance.Shader).Union.tag_type.?).Enum.fields) |field| {
-        if(field.value > n) {
-            n = field.value;
-        }
-    }
-    break :blk n+1;
-};
-
-const Shader = struct {
-    program: gl.GLuint,
-    vertexArrayObject: gl.GLuint,
-};
-
 pub const GL46Instance = struct {
     allocator: std.mem.Allocator,
     context: ?sdl.gl.Context,
@@ -321,5 +276,48 @@ pub const GL46Instance = struct {
     }
 };
 
-// TODO: these things:
-// - combine draw calls together as much as possible (instanced drawing, or maybe multidraw)
+const Window = struct {
+    sdlWindow: sdl.Window,
+    // draws is entirely owned by the Window.
+    // They are copies of the ones given from the submitDraw method
+    draws: std.ArrayList(Instance.DrawObject),
+
+    pub fn init(settings: Instance.WindowSettings, allocator: std.mem.Allocator) !Window {
+        return Window{
+            // TODO: position
+            .sdlWindow = try sdl.createWindow(settings.name, .default, .default, @intCast(settings.width), @intCast(settings.height), .{
+                .resizable = settings.resizable,
+                .context = .opengl,
+            }),
+            .draws = std.ArrayList(Instance.DrawObject).init(allocator),
+        };
+    }
+
+    pub fn deinit(this: Window) void {
+        this.sdlWindow.destroy();
+        this.draws.deinit();
+    }
+};
+
+const Mesh = struct {
+    vertexBuffer: gl.GLuint,
+    indexBuffer: gl.GLuint,
+    numIndices: usize,
+    usageHint: Instance.MeshUsageHint,
+};
+
+const numShaderEnums: usize = blk: {
+    var n = 0;
+    for(@typeInfo(@typeInfo(Instance.Shader).Union.tag_type.?).Enum.fields) |field| {
+        if(field.value > n) {
+            n = field.value;
+        }
+    }
+    break :blk n+1;
+};
+
+const Shader = struct {
+    program: gl.GLuint,
+    vertexArrayObject: gl.GLuint,
+};
+
