@@ -1,7 +1,7 @@
 const std = @import("std");
 const sdl = @import("sdl");
 const gl = @import("GL46/GL46Bind.zig");
-const Instance = @import("Instance.zig");
+const Instance = @import("instance.zig");
 // Implementation of Instance for OpenGL 4.6 and SDL2
 
 pub const GL46Instance = struct {
@@ -104,7 +104,6 @@ pub const GL46Instance = struct {
     }
 
     pub fn runFrame(this: *GL46Instance, window: Instance.WindowHandle, args: Instance.FrameArguments) void {
-    
         if(this.windows.items[window]) |*windowObj| {
             sdl.gl.makeCurrent(this.context.?, windowObj.sdlWindow) catch @panic("Failed to make window current");
             gl.clear(gl.COLOR_BUFFER_BIT);

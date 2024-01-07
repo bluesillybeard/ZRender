@@ -1,5 +1,5 @@
 const std = @import("std");
-const Instance = @import("Instance.zig");
+const Instance = @import("instance.zig");
 
 /// A fake implementation of an instance for debug purposes.
 /// It prints the called functions, and returns a plausible result for each function.

@@ -23,6 +23,7 @@ Features:
     - This should make optimizations like draw batching and instanced rendering easier and more effective
 - ability to set the clear color and to disable clearing before drawing
 - dynamically modifying loaded assets
+- 
 
 
 Bugfixes or QOL:
