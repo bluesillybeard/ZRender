@@ -123,6 +123,8 @@ pub const GL46Instance = struct {
     pub fn runFrame(this: *GL46Instance, window: instance.WindowHandle, args: instance.FrameArguments) void {
         if(this.windows.items[window]) |*windowObj| {
             sdl.gl.makeCurrent(this.context.?, windowObj.sdlWindow) catch @panic("Failed to make window current");
+            const size = sdl.Window.getSize(windowObj.sdlWindow);
+            gl.viewport(0, 0, size.width, size.height);
             gl.clear(gl.COLOR_BUFFER_BIT);
             for(windowObj.draws.items) |d| {
                 this.drawDrawObject(d);
