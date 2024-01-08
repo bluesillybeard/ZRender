@@ -31,7 +31,7 @@ pub fn main() !void {
     // A mesh for the SolidColor shader that draws an outline around the window.
     const inset = 0.05;
 
-    const outlineMesh = try instance.createMeshf32(
+    const outlineMesh = try instance.static_createMesh(f32,
         &[_]f32{
             // Each outer corner (indices 0, 1, 2, 3)
             1, 1, // Top Right
@@ -122,7 +122,7 @@ pub fn main() !void {
 fn makeWindows(instance: ZRender.Instance, list: *std.ArrayList(WindowData)) !void {
     {
         const window = try instance.createWindow(ZRender.WindowSettings{.name = "SolidColor", .width = 256, .height = 256});
-        const mesh = try instance.createMeshf32(
+        const mesh = try instance.static_createMesh(f32,
             &[_]f32{
                 //X   Y
                  1, -1,
@@ -149,7 +149,7 @@ fn makeWindows(instance: ZRender.Instance, list: *std.ArrayList(WindowData)) !vo
     }
     {
         const window = try instance.createWindow(ZRender.WindowSettings{.name = "VertexColor", .width = 256, .height = 256});
-        const mesh = try instance.createMeshf32(
+        const mesh = try instance.static_createMesh(f32,
             &[_]f32{
                 //X   Y  R  G  B  A
                  1, -1, 1, 0, 0, 1,

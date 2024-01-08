@@ -156,10 +156,27 @@ pub fn MakeInstance(comptime This: type) type {
             this.vtable.runFrame(this.object, window, args);
         }
         // TODO: more mesh creation functions for various types of meshes
+        // - indices with different data types (not just u32, but u16 and u8 for better efficiency)
 
-        /// Creates a mesh from a vertex array of floats and indices.
-        pub inline fn createMeshf32(this: This, vertices: []const f32, indices: []const u32, hint: MeshUsageHint) CreateMeshError!MeshHandle {
-            return this.vtable.createMeshf32(this.object, vertices, indices, hint);
+        // TODO: find a way to avoid using the 'static_' prefix so users don't have to type that
+        /// Creates a mesh using an arbitrary input type. Will only work if T has a guaranteed memory layout.
+        pub fn static_createMesh(this: This, comptime T: type, vertices: []const T, indices: []const u32, hint: MeshUsageHint) CreateMeshError!MeshHandle {
+            // TODO: when zig supports pointer casting between slices where the length would change, refactor this code to use that instead.
+            const newVertices = blk: {
+                var s: []const u8 = undefined;
+                // TODO: make sure the compiler notices the obvious divide by 1 and optimizes it out
+                // TODO: make sure T has a defined memory layout for casting.
+                // Endianness does not matter, as it is assumed that all shaders accept the endianness of the system its running on.
+                s.len = @divTrunc(vertices.len * @sizeOf(T), @sizeOf(u8));
+                s.ptr = @ptrCast(vertices.ptr);
+                break :blk s;
+            };
+            return this._createMesh(newVertices, indices, hint);
+        }
+
+        /// Creates a mesh from mesh data - you can call it directly, but it's better to use the regular createMesh function is advised
+        pub inline fn _createMesh(this: This, vertices: []const u8, indices: []const u32, hint: MeshUsageHint) CreateMeshError!MeshHandle {
+            return this.vtable._createMesh(this.object, vertices, indices, hint);
         }
 
         /// Deletes a mesh

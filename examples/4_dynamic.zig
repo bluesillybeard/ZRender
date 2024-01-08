@@ -1,3 +1,5 @@
+// This example demonstrates the ability to modify a mesh after it has been loaded.
+
 const std = @import("std");
 const ZRender = @import("zrender");
 const alloc = std.heap.GeneralPurposeAllocator(.{});
@@ -16,8 +18,8 @@ pub fn main() !void {
     // The window must be destroyed before the instance
     defer instance.deinitWindow(window);
 
-    // Create a draw object with a single solid color triangle
-    const mesh = try instance.static_createMesh(f32, &[_]f32{0.5, -0.5, -0.5, -0.5, 0.5, 0.5}, &[_]u32{0, 1, 2}, .draw);
+    // Create a draw object with a single solid color triangle for now
+    const mesh = try instance.createMeshf32(&[_]f32{0.5, -0.5, -0.5, -0.5, 0.5, 0.5}, &[_]u32{0, 1, 2}, .draw);
     const triangle = ZRender.DrawObject{
         .draws = &[1]ZRender.MeshHandle{mesh},
         .shader = .{.SolidColor = .{.color = .{.r = 1, .g = 1, .b = 1, .a = 1}, .transform = ZRender.Transform2D.Identity}},

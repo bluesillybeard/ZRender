@@ -134,7 +134,7 @@ pub const GL46Instance = struct {
         }
     }
 
-    pub fn createMeshf32(this: *GL46Instance, vertices: []const f32, indices: []const u32, hint: instance.MeshUsageHint) instance.CreateMeshError!instance.MeshHandle {
+    pub fn _createMesh(this: *GL46Instance, vertices: []const u8, indices: []const u32, hint: instance.MeshUsageHint) instance.CreateMeshError!instance.MeshHandle {
         const usage: gl.GLenum = switch (hint) {
             .cold => gl.STATIC_DRAW,
             .draw => gl.STATIC_DRAW,
@@ -146,7 +146,7 @@ pub const GL46Instance = struct {
         const vertexBuffer = buffers[0];
         const indexBuffer = buffers[1];
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, @intCast(vertices.len * @sizeOf(f32)), vertices.ptr, usage);
+        gl.bufferData(gl.ARRAY_BUFFER, @intCast(vertices.len), vertices.ptr, usage);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, @intCast(indices.len * @sizeOf(u32)), indices.ptr, usage);
 

@@ -8,6 +8,7 @@ Features:
 - [RIO] remove implicit ordering and add a way to explicitly declare draw order
     - This should make optimizations like draw batching and instanced rendering easier and more effective
 - dynamically modifying loaded assets
+- all the events
 
 ## Before the first alpha 'releases':
 

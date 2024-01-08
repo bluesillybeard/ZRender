@@ -57,11 +57,11 @@ pub const MockInstance = struct {
         std.debug.print("runFrame {} {}\n", .{window, args});
     }
 
-    pub fn createMeshf32(this: *MockInstance, vertices: []const f32, indices: []const u32, hint: Instance.MeshUsageHint) Instance.CreateMeshError!Instance.MeshHandle {
+    pub fn _createMesh(this: *MockInstance, vertices: []const u8, indices: []const u32, hint: Instance.MeshUsageHint) Instance.CreateMeshError!Instance.MeshHandle {
         // TODO: for methods that recieve a mesh, make sure that mesh is one that is still valid.
         // create a random number to serve as the ID
         const n: usize = @intCast(this.rng.next());
-        std.debug.print("createMeshf32 {any} {any} {} -> {}\n", .{vertices, indices, hint, n});
+        std.debug.print("_createMesh {any} {any} {} -> {}\n", .{vertices, indices, hint, n});
         return n;
     }
 

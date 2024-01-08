@@ -13,17 +13,23 @@ pub fn main() !void {
     defer instance.deinit();
 
     // Create a window with default options
-    const window1 = try instance.createWindow(.{});
+    const window1 = try instance.createWindow(.{
+        .width = 256,
+        .height = 256,
+    });
     defer instance.deinitWindow(window1);
     // Create another window
     const window2 = try instance.createWindow(.{});
     defer instance.deinitWindow(window2);
     // Create another window
-    const window3 = try instance.createWindow(.{});
+    const window3 = try instance.createWindow(.{
+        .width = 1004,
+        .height = 812,
+    });
     defer instance.deinitWindow(window3);
 
     // Create draw objects with a single solid color triangle
-    const mesh = try instance.createMeshf32(&[_]f32{0.5, -0.5, -0.5, -0.5, 0.5, 0.5}, &[_]u32{0, 1, 2}, .draw);
+    const mesh = try instance.static_createMesh(f32, &[_]f32{0.5, -0.5, -0.5, -0.5, 0.5, 0.5}, &[_]u32{0, 1, 2}, .draw);
     defer instance.deinitMesh(mesh);
 
     // Magenta triangle
