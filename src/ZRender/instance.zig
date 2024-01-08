@@ -57,6 +57,9 @@ pub const Shader = union(enum) {
     /// Mesh Attributes: position (x: f32, y: f32)
     /// Other data: rgba color, floats where 0 -> black and 1 -> white
     SolidColor: struct{color: Color, transform: Transform2D},
+    /// Draws a mesh with vertex colors
+    /// Mesh Attributes: position (x: f32, y: f32), color: (r: f32, g: f32, b: f32, a: f32)
+    VertexColor: struct{transform: Transform2D},
 };
 
 // A handle to an actual mesh on the GPU

@@ -69,7 +69,7 @@ pub fn main() !void {
         while(try instance.enumerateEvent()) |event| {
             if(event.event == .exit){
                 var i: usize = 0;
-                while(i < windows.items.len) : (i+=1) {
+                while(i < windows.items.len) {
                     const w = windows.items[i];
                     if(w.window == event.window) {
                         _ = windows.swapRemove(i);
@@ -78,8 +78,11 @@ pub fn main() !void {
                         }
                         w.object.deinit(windows.allocator);
                         instance.deinitWindow(w.window);
-                        if(windows.items.len == 0)break :mainloop;
-                        i-=1;
+                        if(windows.items.len == 0){
+                            break :mainloop;
+                        }
+                    } else {
+                        i += 1;
                     }
                 }
             }
@@ -118,12 +121,13 @@ pub fn main() !void {
 // Makes all of the windows and puts them into the list
 fn makeWindows(instance: ZRender.Instance, list: *std.ArrayList(WindowData)) !void {
     {
-        const window = try instance.createWindow(ZRender.WindowSettings{.name = "SolidColor"});
+        const window = try instance.createWindow(ZRender.WindowSettings{.name = "SolidColor", .width = 256, .height = 256});
         const mesh = try instance.createMeshf32(
             &[_]f32{
+                //X   Y
+                 1, -1,
                 -1, -1,
-                1, -1,
-                0.5, 1,
+                 0,  1,
             },
             &[_]u32{
                 0, 1, 2,
@@ -131,6 +135,32 @@ fn makeWindows(instance: ZRender.Instance, list: *std.ArrayList(WindowData)) !vo
         const shader = ZRender.Shader{
             .SolidColor = .{
                 .color = .{.r = 1, .g = 0, .b = 1, .a = 1},
+                .transform = ZRender.Transform2D.Identity,
+            },
+        };
+        const draw = ZRender.DrawObject{
+            .draws = &[1]ZRender.MeshHandle{mesh},
+            .shader = shader,
+        };
+        try list.append(.{
+            .object = try draw.duplicate(list.allocator),
+            .window = window,
+        });
+    }
+    {
+        const window = try instance.createWindow(ZRender.WindowSettings{.name = "VertexColor", .width = 256, .height = 256});
+        const mesh = try instance.createMeshf32(
+            &[_]f32{
+                //X   Y  R  G  B  A
+                 1, -1, 1, 0, 0, 1,
+                -1, -1, 0, 1, 0, 1,
+                 0,  1, 0, 0, 1, 1,
+            },
+            &[_]u32{
+                0, 1, 2,
+        }, .draw);
+        const shader = ZRender.Shader{
+            .VertexColor = .{
                 .transform = ZRender.Transform2D.Identity,
             },
         };
