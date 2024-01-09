@@ -1,12 +1,21 @@
 # TODO
 
+## Current API reform
+
+- It might be worth just making the mesh and shader tied together completely - a mesh is bound to a shader, and that's that
+- make a draw object the union(enum), and make the mesh(es) fields of shaders instead of a drawObject containing a mesh and a shader
+- replacing or modifying mesh data
+- [RIO] remove implicit ordering and add a way to explicitly declare draw order
+    - This should make optimizations like draw batching and instanced rendering easier and more effective
+
+- ability to set the clear color and to disable clearing before drawing
+    - clear options are given as a struct for the OnFrame method
+
+
 ## Before starting work on Celestial:
 
 Features:
-- replacing or modifying mesh data
 - textures
-- [RIO] remove implicit ordering and add a way to explicitly declare draw order
-    - This should make optimizations like draw batching and instanced rendering easier and more effective
 - dynamically modifying loaded assets
 - all the events
 
@@ -14,7 +23,6 @@ Features:
 
 Features:
 - more shaders
-    - textured shaders
     - textured with vertex color
     - textured with luminance
     - blending and non-blending version of shaders
@@ -25,7 +33,13 @@ Features:
     - more optimized versions for lower memory usage
         - alternates where color is 4 bytes instead of 4 floats
         - alternates where color only has RGB, not the alpha channel
-- ability to set the clear color and to disable clearing before drawing
+- custom animated vector graphics format
+    - Might be worth making the animation data and the actual graphics separate. Animation data would depend on graphics data, but the graphics data would hold its own.
+- render textures - render to a texture instead of just the window
+    - works like a virtual window that takes draw objects like a normal window, but it can be used as a texture as well
+- shaders that could actually make use of render texturs
+    - post-processing shaders
+    - Might be an easy first step before custom shaders, since the inputs and outputs can be pre-defined
 
 Bugfixes or QOL:
 - Create standalone documentation
