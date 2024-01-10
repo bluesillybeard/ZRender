@@ -18,28 +18,29 @@ ZRender is a simple cross platform windowing + rendering system written in Zig.
 
 It is designed for one of my personal projects (A video game vaguely inspired by Starbound), but I guess anyone can use it if they want to.
 
-## The main loop looks like something this
-- create an instance
-- create at least one window because OpenGL is freaking stupid and requires a window before anything can happen
-- Every frame:
-    - enumerate events
-    - create or destroy windows
-    - create draw objects from draw data
-        - draw data can be loaded from files or created directly
-        - Reuse draw objects between frames, in fact it's often best to load everything before the main loop technically begins
-        - you can also modify existing draw objects to reduce overhead
-        - Note that ZRender generally takes a lazy approach - the draw data will not be finalized until it looks like it's about to be used, so if you want to load assets ahead of time, use `fakeUseDrawObject` to guarantee that it will be finalized during this frame.
-    - Submit draw object(s) to window(s)
-        - Objects are submited in lists, where each list is an unordered set of objects.
-        - Draw lists have an order though - draw lists are processed in the same order they are submitted, in case your rendering is order dependent.
-    - BeginDrawing instance function
-        - takes a set of windows to begin processing
-        - the instance will be basically unusable until the frame is done drawing
-    - Do whatver CPU things that should be done (game logic, loading files, really anything that doesn't require the interface)
-    - FinishDrawing instance function
-        - Will finish drawing for the same set of windows given to BeginDrawing
-        - Resets the draw lists for those windows
-    - DisplayFrame instance function
+## The program lifecycle looks like this
+- init stuff
+- each frame:
+    - instance.beginFrame
+    - submit objects to draw
+    - instance.renderFrame
+    - do whatever CPU stuff
+        - this inclues loading asses and creating/destroying windows
+- delete stuff
+
+The only real requirement for init stuff is to create an instance,
+Although it's not a bad idea to create a window and load some of the assets during that time too.
+
+instance.beginFrame tells the instance that you are about to start loading it with objects to draw.
+Trying to load objects before calling beginFrame is undefined behavior.
+
+Doing other things (such as loading assets or creating/destroying windows) during this time is considered undefined behavior. Do that after renderFrame is called.
+
+Objects are submitted in lists. Objects within a list have no defined draw order, but lists submitted separately are guaranteed to be drawn separately in the same order they are submitted.
+
+instance.finishFrame blocks for vsync in the same way that GLFW or SDL2 block when calling swapBuffers. Which is to say, it might *not* block in order to load the GPU with more stuff to do.
+
+The order in which objects are deleted does not matter, as long as the instance is deleted last.
 
 ## Note about development
 - Because I created this library for my own use, don't expect much. I will gladly accept poll requests though!

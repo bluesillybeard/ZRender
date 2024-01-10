@@ -1,5 +1,11 @@
-const shader = @import("shader.zig");
-// Little pieces of ZRender
+// this is the file to import.
+// It contains forward declarations of everything an application might need
+const instance = @import("instance.zig");
+
+pub const shader = @import("shader.zig");
+
+pub const InstanceOptions = instance.InstanceOptions;
+pub const Instance = instance.Instance;
 
 /// A color, extern so less conversion overhead is required by the underlying API
 pub const Color = extern struct {
@@ -63,7 +69,21 @@ pub const DrawData = struct {
     vertexData: []const u8,
     indices: []const u32,
     shader: shader.ShaderType,
-    usage: DrawObjectUsage,
+    usage: DrawObjectUsage = .draw,
+};
+
+pub fn verticesToData(comptime Shader: type, vertices: []const Shader.Vertex) []const u8 {
+    var data: []const u8 = undefined;
+    data.len = vertices.len * @sizeOf(Shader.Vertex);
+    data.ptr = @ptrCast(vertices.ptr);
+    return data;
+}
+
+/// Draw object ready for drawing.
+/// If the type of the shader data is not the same as the shader type of the draw object, that is undefined behavior.
+pub const DrawObject = struct {
+    object: DrawObjectHandle,
+    shader: shader.Shader,
 };
 
 /// a modification to draw data
@@ -83,4 +103,12 @@ pub const DrawDiff = struct {
 
 pub const Event = union(enum) {
 
+};
+
+pub const BeginFrameArgs = struct {
+
+};
+
+pub const FinishFrameArgs = struct {
+    vsync: bool = false,
 };

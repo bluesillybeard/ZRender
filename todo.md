@@ -1,12 +1,11 @@
 # TODO
 
-## Current API reform
+## Right now
 
-- It might be worth just making the mesh and shader tied together completely - a mesh is bound to a shader, and that's that
-- make a draw object the union(enum), and make the mesh(es) fields of shaders instead of a drawObject containing a mesh and a shader
-- replacing or modifying mesh data
-- [RIO] remove implicit ordering and add a way to explicitly declare draw order
-    - This should make optimizations like draw batching and instanced rendering easier and more effective
+- mock backend
+- implement examples that use all of the features
+
+## very very soon
 
 - ability to set the clear color and to disable clearing before drawing
     - clear options are given as a struct for the OnFrame method
@@ -18,6 +17,10 @@ Features:
 - textures
 - dynamically modifying loaded assets
 - all the events
+- window stuff
+    - getting / setting window position
+    - getting / setting window size
+    - 
 
 ## Before the first alpha 'releases':
 

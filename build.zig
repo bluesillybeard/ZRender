@@ -4,9 +4,6 @@ const sdl2sdk = @import("SDL.zig/build.zig");
 // name, path
 const examples = [_][2][]const u8 {
     [2][]const u8 {"simple", "examples/0_simple.zig"},
-    [2][]const u8 {"triangle", "examples/1_triangle.zig"},
-    [2][]const u8 {"windows", "examples/2_windows.zig"},
-    [2][]const u8 {"shader", "examples/3_shader.zig"},
 };
 
 pub fn build(b: *std.Build) !void {
@@ -16,20 +13,14 @@ pub fn build(b: *std.Build) !void {
     //ZRender depends on SDL.zig. As long as it's added as a module, it should work.
     const sdl2 = sdl2sdk.init(b, null);
 
-    //get zig-interface
-    const interfaceModule = b.addModule("interface", .{
-        .source_file = .{.path="zig-interface/src/interface.zig"},
-    });
-
     // ZRender is a source library.
     // It is meant to be directly incorperated into a projects source code,
     // using a zig module, like so.
     const zrender = b.addModule("zrender", .{
-        .source_file = .{.path="src/ZRender.zig"},
+        .source_file = .{.path="src/zrender.zig"},
         .dependencies = &[_]std.Build.ModuleDependency{
             .{.name = "sdl", .module = sdl2.getWrapperModule()},
-            .{.name = "interface", .module = interfaceModule}},
-    });
+    }});
 
     inline for(examples) |example| {
         const name = example[0];
@@ -100,7 +91,7 @@ pub fn generateVSCodeFiles(allocator: std.mem.Allocator) anyerror!struct {launch
         \\         {
         \\             "label": "build",
         \\             "type": "shell",
-        \\             "command": "zig build install",
+        \\             "command": "zig build install -freference-trace", <!-- reference trace because I see no real reason to have them disabled -->
         \\             "problemMatcher": [],
         \\             "group": {
         \\                 "kind": "build",
@@ -127,7 +118,7 @@ pub fn generateVSCodeFiles(allocator: std.mem.Allocator) anyerror!struct {launch
         \\         {{
         \\         "label": "build{s}",
         \\             "type": "shell",
-        \\             "command": "zig build {s}",
+        \\             "command": "zig build {s}  -freference-trace", <!-- reference trace because I see no real reason to have them disabled -->
         \\             "problemMatcher": [],
         \\             "group": {{
         \\                 "kind": "build",
