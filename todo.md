@@ -2,7 +2,6 @@
 
 ## Right now
 
-- mock backend
 - implement examples that use all of the features
 
 ## very very soon
