@@ -21,7 +21,7 @@ pub fn main() !void {
         .vertexData = zrender.verticesToData(zrender.shader.SolidColor, &[_]zrender.shader.SolidColor.Vertex{
             .{.x = -1, .y = -1},
             .{.x = 1, .y = -1},
-            .{.x = 0.5, .y = 1},
+            .{.x = 0, .y = 1},
         }),
         .indices = &[_]u32{1, 2, 3},
         .shader = zrender.shader.ShaderType.SolidColor,

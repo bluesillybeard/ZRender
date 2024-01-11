@@ -3,10 +3,11 @@
 ## yet again I rewrite the project
 Here's the kind of rendering I need for Celestial, at a high level:
 - fast animated SVG
-    - probably with a custom format to keep things simpler and easier
-        - Since the SVG will be translated into a mesh for fast rendering
     - gradients
     - images
+    - Ultimately, the pipeline will probably look like this rather than trying to draw the SVGs directly:
+        - SVG -> custom animation software -> custom file format -> the game
+
 - decent cross-platform support
     - a high level API that can theoretically be implemented for any platform
 - multiple windows
@@ -45,30 +46,7 @@ The order in which objects are deleted does not matter, as long as the instance 
 ## Note about development
 - Because I created this library for my own use, don't expect much. I will gladly accept poll requests though!
 - This library is still new, so expect breaking changes frequently
-
-<!-- ignore this garbage -->
-<!-- ZRender is a simple cross platform rendering + windowing system written in Zig.
-
-What is the purpose of ZRender?
-- To be a simple but powerful rendering system, mainly for my own projects.
-
-What are the design goals of ZRender?
-1. Take advantage of Zig's strengths
-    - interfacing with C
-    - compile time metaprogramming
-    - cross-compilation
-    - custom allocators
-2. Focus on rendering
-    - No entity management, no physics, no networking, no scripting. Just plain rendering. If you want those things, add them yourself.
-3. Minimal API
-    - As few distinct functions as possible
-
-## How to use ZRender
-- look at examples:
-    - [`0_simple.zig`](./examples/0_simple.zig)
-    - [`1_triangle.zig`](./examples/1_triangle.zig)
-- Look at [`build.zig`](./build.zig) to see how to add ZRender to your own project
-
+<!--
 Supported platforms:
 - Windows (untested at the moment, but it almost certainly works perfectly)
 - Linux (in theory any unix-like with SDL2 and at least one of the supported APIS should work)

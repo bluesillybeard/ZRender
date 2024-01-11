@@ -4,6 +4,8 @@ const sdl2sdk = @import("SDL.zig/build.zig");
 // name, path
 const examples = [_][2][]const u8 {
     [2][]const u8 {"simple", "examples/0_simple.zig"},
+    [2][]const u8 {"dynamic", "examples/1_dynamic.zig"},
+
 };
 
 pub fn build(b: *std.Build) !void {

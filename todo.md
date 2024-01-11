@@ -2,6 +2,9 @@
 
 ## Right now
 
+- all the events
+    - clipboard
+    - 
 - implement examples that use all of the features
 
 ## very very soon
@@ -10,20 +13,14 @@
     - clear options are given as a struct for the OnFrame method
 
 
-## Before starting work on Celestial:
+## Before moving Celestial to ZRender instead of Raylib:
 
 Features:
 - textures
 - dynamically modifying loaded assets
-- all the events
 - window stuff
     - getting / setting window position
     - getting / setting window size
-    - 
-
-## Before the first alpha 'releases':
-
-Features:
 - more shaders
     - textured with vertex color
     - textured with luminance
@@ -35,10 +32,19 @@ Features:
     - more optimized versions for lower memory usage
         - alternates where color is 4 bytes instead of 4 floats
         - alternates where color only has RGB, not the alpha channel
-- custom animated vector graphics format
-    - Might be worth making the animation data and the actual graphics separate. Animation data would depend on graphics data, but the graphics data would hold its own.
+    - vertex animation textures
+    - shaders for rigged animations
+        - I would have to do more research into how exactly that works
 - render textures - render to a texture instead of just the window
     - works like a virtual window that takes draw objects like a normal window, but it can be used as a texture as well
+
+## Before the first alpha 'releases':
+
+Features:
+- more shaders
+    - more optimized versions for lower memory usage
+        - alternates where color is 4 bytes instead of 4 floats
+        - alternates where color only has RGB, not the alpha channel
 - shaders that could actually make use of render texturs
     - post-processing shaders
     - Might be an easy first step before custom shaders, since the inputs and outputs can be pre-defined
