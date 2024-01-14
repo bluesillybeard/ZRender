@@ -1,5 +1,8 @@
 # ZRender
 
+## Lol I abandoned this project
+- other libraries exist [like all of these](https://github.com/raizam/gamedev_libraries) So there's no point in ZRender existing.
+
 ## yet again I rewrite the project
 Here's the kind of rendering I need for Celestial, at a high level:
 - fast animated SVG

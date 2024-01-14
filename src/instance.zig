@@ -33,24 +33,28 @@ pub const Instance = struct {
         return this.vtable.enumerateEvent(this.object);
     }
 
-    pub fn createDrawObject(this: Instance, data: zrender.DrawData) errors.CreateDrawObjectError!zrender.DrawObjectHandle {
-        return this.vtable.createDrawObject(this.object, data);
+    pub fn createMeshObject(this: Instance, data: zrender.MeshData) errors.CreateMeshObjectError!zrender.MeshObjectHandle {
+        return this.vtable.createMeshObject(this.object, data);
+    }
+
+    pub fn deinitMeshObject(this: Instance, mesh: zrender.MeshObjectHandle) void {
+        this.vtable.deinitMeshObject(this.object, mesh);
+    }
+
+    pub fn createDrawObject(this: Instance, mesh: zrender.MeshObjectHandle, shaderType: zrender.shader.ShaderType) errors.CreateDrawObjectError!zrender.DrawObjectHandle {
+        return this.vtable.createDrawObject(this.object, mesh, shaderType);
     }
 
     pub fn deinitDrawObject(this: Instance, draw: zrender.DrawObjectHandle) void {
         this.vtable.deinitDrawObject(this.object, draw);
     }
 
-    pub fn replaceDrawObject(this: Instance, draw: zrender.DrawObjectHandle, data: zrender.DrawData) void {
-        this.vtable.replaceDrawObject(this.object, draw, data);
+    pub fn replaceDrawObject(this: Instance, draw: zrender.DrawObjectHandle, mesh: zrender.MeshObjectHandle) void {
+        this.vtable.replaceDrawObject(this.object, draw, mesh);
     }
 
     pub fn modifyDrawObject(this: Instance, draw: zrender.DrawObjectHandle, data: zrender.DrawDiff) void {
         this.vtable.modifyDrawObject(this.object, draw, data);
-    }
-    
-    pub fn fakeUseDrawObject(this: Instance, draw: zrender.DrawObjectHandle) void {
-        this.vtable.fakeUseDrawObject(this.object, draw);
     }
 
     pub fn beginFrame(this: Instance, args: zrender.BeginFrameArgs) void {
@@ -85,6 +89,10 @@ pub const errors = struct {
 
     pub const CreateDrawObjectError = error {
         createDrawObjectError,
+    } || std.mem.Allocator.Error;
+
+    pub const CreateMeshObjectError = error {
+        createMeshObjectError,
     } || std.mem.Allocator.Error;
 };
 

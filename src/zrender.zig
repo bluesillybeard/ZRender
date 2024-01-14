@@ -51,25 +51,33 @@ pub const WindowSettings = struct {
 /// A handle to a window
 pub const WindowHandle = usize;
 
+/// a handle to a mesh
+pub const MeshObjectHandle = usize;
+
+/// Raw mesh data
+pub const MeshData = struct {
+    vertexData: []const u8,
+    indices: []const u32,
+};
+
+pub fn createMeshData(comptime Shader: type, vertices: []const Shader.Vertex, indices: []const u32) MeshData {
+    return MeshData{
+        .vertexData = verticesToData(Shader, vertices),
+        .indices = indices,
+    };
+}
+
 /// A handle to a draw object
 pub const DrawObjectHandle = usize;
 
 /// usage hint for a draw object
 pub const DrawObjectUsage = enum {
-    /// object is used mainly for drawing
+    /// object is used for drawing
     draw,
-    /// object is used mainly for drawing but is sometimes modified
+    /// object is used for drawing and is sometimes modified
     draw_write,
     /// object is used for drawing and is modified every frame or so
     draw_stream,
-};
-
-/// Draw data
-pub const DrawData = struct {
-    vertexData: []const u8,
-    indices: []const u32,
-    shader: shader.ShaderType,
-    usage: DrawObjectUsage = .draw,
 };
 
 pub fn verticesToData(comptime Shader: type, vertices: []const Shader.Vertex) []const u8 {
@@ -110,5 +118,5 @@ pub const BeginFrameArgs = struct {
 };
 
 pub const FinishFrameArgs = struct {
-    vsync: bool = false,
+    vsync: bool = true,
 };
