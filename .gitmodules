@@ -1,0 +1,3 @@
+[submodule "Kinc.zig"]
+	path = Kinc.zig
+	url = https://github.com/bluesillybeard/Kinc.zig
