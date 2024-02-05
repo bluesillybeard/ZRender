@@ -11,7 +11,7 @@ Currently, it is extremely simple - a draw component is simply these things:
 - None. Right now, a mesh is created by calling a function with the raw mesh data. Loading meshes from a file will be supported later
 
 ## Accepted texture formats
-- PNG
+- png
 
 ## Matrix transforms
-Right now, you're on your own in terms of creating the transform matrix. In the future, there will be a myriad of utilities for creating matrix transforms in an ergonomic way.
+You're on your own in this regard. [zlm](https://github.com/ziglibs/zlm) is a good option for doing linear mathematics.
