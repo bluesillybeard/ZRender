@@ -67,6 +67,10 @@ pub const ZRenderSystem = struct {
             .textureUnit = .{},
             .transformLocation = .{},
             .allocator = heapAllocator,
+            .onFrame = ecs.Signal(OnFrameEventArgs).init(heapAllocator),
+            .onUpdate = ecs.Signal(OnUpdateEventArgs).init(heapAllocator),
+            .updateTime = std.time.microTimestamp(),
+            .lastFrameTime = std.time.microTimestamp(),
         };
     }
 
@@ -83,11 +87,12 @@ pub const ZRenderSystem = struct {
     }
 
     pub fn deinit(this: *@This()) void {
-        
         this.meshes.deinit();
         this.meshSpots.deinit();
         this.textures.deinit();
         this.textureSpots.deinit();
+        this.onFrame.deinit();
+        this.onUpdate.deinit();
     }
 
     fn initZRender(this: *@This(), registries: *zengine.RegistrySet) !void {
@@ -210,8 +215,30 @@ pub const ZRenderSystem = struct {
         // get this
         var this = registries.globalRegistry.getRegister(ZRenderSystem).?;
 
+        const realTime = std.time.microTimestamp();
+
+        this.onFrame.publish(.{
+            .delta = realTime - this.lastFrameTime,
+            .time = realTime,
+            .registries = registries,
+        });
+
+        // If the update time too far behind, skip ahead. This effectively slows down the game to what the computer can handle.
+        if(realTime - this.updateTime > this.maxUpdateLag) {
+            this.updateTime = realTime - this.updateDelta;
+        }
+        // Update until the update time has caught up
+        while(realTime - this.updateTime >= this.updateDelta) {
+            this.updateTime += this.updateDelta;
+            this.onUpdate.publish(.{
+                .delta = this.updateDelta,
+                .time = this.updateTime,
+                .registries = registries,
+            });
+        }
+
         c.kinc_g4_begin(0);
-        c.kinc_g4_clear(c.KINC_G4_CLEAR_COLOR, 0, 0.0, 0);
+        c.kinc_g4_clear(c.KINC_G4_CLEAR_COLOR | c.KINC_G4_CLEAR_DEPTH, 0, 0.0, 0);
         c.kinc_g4_set_pipeline(&this.pipeline);
         // Draw everything in the global registry
         const view = registries.globalEcsRegistry.basicView(RenderComponent);
@@ -252,7 +279,7 @@ pub const ZRenderSystem = struct {
         c.kinc_g4_set_index_buffer(&mesh.indices);
         c.kinc_g4_draw_indexed_vertices();
     }
-    // pipeline has a reference to this, so this needs to be stored in a place where its lifetime fully encompasses pipeline's.
+    // pipeline has a reference to structure, so this needs to be stored in a place where its lifetime fully encompasses pipeline's.
     structure: c.kinc_g4_vertex_structure,
     pipeline: c.kinc_g4_pipeline,
     meshes: std.ArrayList(?Mesh),
@@ -262,6 +289,34 @@ pub const ZRenderSystem = struct {
     textureUnit: c.kinc_g4_texture_unit,
     transformLocation: c.kinc_g4_constant_location,
     allocator: std.mem.Allocator,
+    /// Runs for every rendered frame, right before ZRender draws all of the objects.
+    onFrame: ecs.Signal(OnFrameEventArgs),
+    /// Runs at a constant rate, which is configurable.
+    onUpdate: ecs.Signal(OnUpdateEventArgs),
+    /// In microseconds. 60 hertz by default.
+    updateDelta: i64 = std.time.us_per_s / 60,
+    /// The maximum amount of lag between the real time and update time, in microseconds
+    maxUpdateLag: i64 = std.time.us_per_s / 30,
+    /// The current time in terms of the application, microseconds
+    updateTime: i64,
+    /// The time when the last frame was rendered
+    lastFrameTime: i64,
+};
+
+pub const OnFrameEventArgs = struct {
+    // The delta time, in microseconds
+    delta: i64,
+    // The current time, in microseconds
+    time: i64,
+    registries: *zengine.RegistrySet,
+};
+
+pub const OnUpdateEventArgs = struct {
+    // The delta time, in microseconds
+    delta: i64,
+    // The current time, in microseconds
+    time: i64,
+    registries: *zengine.RegistrySet,
 };
 
 const Mesh = struct {

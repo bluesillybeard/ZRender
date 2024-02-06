@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const kinc = @import("Kinc.zig/build.zig");
 
-pub fn link(comptime modulePath: []const u8, c: *std.Build.Step.Compile, zengine: *std.Build.Module) !void {
+pub fn link(comptime modulePath: []const u8, c: *std.Build.Step.Compile, zengine: *std.Build.Module, ecs: *std.Build.Module) !void {
     // TODO: take in options as parameters
     const options = kinc.KmakeOptions{
         .platform = .guess,
@@ -15,6 +15,7 @@ pub fn link(comptime modulePath: []const u8, c: *std.Build.Step.Compile, zengine
         .optimize = c.root_module.optimize.?,
     });
     zrender.root_module.addImport("zengine", zengine);
+    zrender.root_module.addImport("ecs", ecs);
 
     try kinc.link(realModulePath, zrender, options);
     try kinc.compileShader(realModulePath, zrender, modulePath ++ "/src/shaders/shader.frag.glsl", modulePath ++ "/src/shaderBin/shader.frag", options);
