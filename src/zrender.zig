@@ -20,7 +20,7 @@ pub const RenderComponent = struct {
 
 pub const Vertex = extern struct {
     x: f32, y: f32, z: f32,
-    texY: f32, texX: f32,
+    texX: f32, texY: f32,
     /// Red is the least significant byte, Alpha is the most significant
     color: u32,
     /// 0 -> texture, 1 -> color
