@@ -10,6 +10,8 @@ const c = @cImport({
     @cInclude("kinc/graphics4/vertexbuffer.h");
     @cInclude("kinc/graphics4/texture.h");
     @cInclude("kinc/system.h");
+    @cInclude("kinc/input/keyboard.h");
+    @cInclude("kinc/input/mouse.h");
 });
 
 pub const RenderComponent = struct {
@@ -118,6 +120,16 @@ pub const ZRenderSystem = struct {
         c.kinc_g4_pipeline_compile(&this.pipeline);
         this.textureUnit = c.kinc_g4_pipeline_get_texture_unit(&this.pipeline, "tex");
         this.transformLocation = c.kinc_g4_pipeline_get_constant_location(&this.pipeline, "transform");
+
+        c.kinc_mouse_set_enter_window_callback(&mouse_enter_window, registries);
+        c.kinc_mouse_set_leave_window_callback(&mouse_leave_window, registries);
+        c.kinc_mouse_set_press_callback(&mouse_press, registries);
+        c.kinc_mouse_set_release_callback(&mouse_release, registries);
+        c.kinc_mouse_set_move_callback(&mouse_move, registries);
+        c.kinc_mouse_set_scroll_callback(&mouse_scroll, registries);
+        c.kinc_keyboard_set_key_down_callback(&key_down, registries);
+        c.kinc_keyboard_set_key_up_callback(&key_up, registries);
+        c.kinc_keyboard_set_key_press_callback(&key_press, registries);
     }
 
     pub fn loadTexture(this: *@This(), data: []const u8) !TextureHandle {
@@ -127,9 +139,9 @@ pub const ZRenderSystem = struct {
             if(this.textureSpots.items.len > 0){
                 break :blk this.textureSpots.pop();
             } else {
-                const t = this.textures.items.len;
+                const temp = this.textures.items.len;
                 _ = try this.textures.addOne();
-                break :blk t;
+                break :blk temp;
             }
         };
         this.textures.items[handle] = texture;
@@ -143,18 +155,93 @@ pub const ZRenderSystem = struct {
             if(this.meshes.items.len > 0){
                 break :blk this.meshSpots.pop();
             } else {
-                const t = this.textures.items.len;
+                const temp = this.textures.items.len;
                 _ = try this.meshes.addOne();
-                break :blk t;
+                break :blk temp;
             }
         };
         this.meshes.items[handle] = mesh;
         return handle;
     }
 
+    // The rest of the API is basically a bunch of wrappers over Kinc functions
     pub fn run(this: *@This()) void {
         _ = this;
         c.kinc_start();
+    }
+
+    fn mouse_enter_window(window: c_int, data: ?*anyopaque) callconv(.C) void {
+        const registries = r(data);
+        const this = t(registries);
+        _ = this;
+        // my lsp is having a ceisure rn
+
+        _ = window;
+        // TODO
+    }
+
+    fn mouse_leave_window(window: c_int, data: ?*anyopaque) callconv(.C) void {
+        _ = window;
+        _ = data;
+        // TODO
+    }
+
+    fn mouse_press(window: c_int, button: c_int, x: c_int, y: c_int, data: ?*anyopaque) callconv(.C) void {
+        _ = window;
+        _ = button;
+        _ = x;
+        _ = y;
+        _ = data;
+        // TODO
+    }
+
+    fn mouse_release(window: c_int, button: c_int, x: c_int, y: c_int, data: ?*anyopaque) callconv(.C) void {
+        _ = window;
+        _ = button;
+        _ = x;
+        _ = y;
+        _ = data;
+        // TODO
+    }
+    
+    fn mouse_move(window: c_int, x: c_int, y: c_int, mov_x: c_int, mov_y: c_int, data: ?*anyopaque) callconv(.C) void {
+        _ = window;
+        _ = x;
+        _ = y;
+        _ = mov_x;
+        _ = mov_y;
+        _ = data;
+        //TODO
+    }
+
+    fn mouse_scroll(window: c_int, delta: c_int, data: ?*anyopaque) callconv(.C) void {
+        _ = window;
+        _ = delta;
+        _ = data;
+        // TODO
+    }
+
+    // Hmm, strange that key down merges inputs from all windows.
+    // TODO: When adding multiwindowing to ZRender,
+    // see if there is a way to differentiate keystrokes between different windows.
+    // If not, look into making a PR into Kinc to add it.
+    fn key_down(key: c_int, data: ?*anyopaque) callconv(.C) void {
+        _ = key;
+        _ = data;
+        // TODO
+    }
+    fn key_up(key: c_int, data: ?*anyopaque) callconv(.C) void {
+        _ = key;
+        _ = data;
+        // TODO
+    }
+    
+    // What encoding character is supposed to be in is entirely unclear.
+    // However, based on minimal testing it appears to be ascii or more likely unicode.
+    fn key_press(character: c_uint, data: ?*anyopaque) callconv(.C) void {
+        _ = data;
+        _ = character;
+        // TODO
     }
 
     fn _loadTexture(this: *@This(), data: []const u8) !Texture {
@@ -279,6 +366,17 @@ pub const ZRenderSystem = struct {
         c.kinc_g4_set_index_buffer(&mesh.indices);
         c.kinc_g4_draw_indexed_vertices();
     }
+
+
+    inline fn r(data: ?*anyopaque) *zengine.RegistrySet {
+        if(data == null) @panic("Something is very very very wrong");
+        return @as(*zengine.RegistrySet, @alignCast(@ptrCast(data)));
+    }
+
+    inline fn t(registries: *zengine.RegistrySet) *@This() {
+        return registries.globalRegistry.getRegister(@This()).?;
+    }
+    // Things that should be considered private members
     // pipeline has a reference to structure, so this needs to be stored in a place where its lifetime fully encompasses pipeline's.
     structure: c.kinc_g4_vertex_structure,
     pipeline: c.kinc_g4_pipeline,
@@ -288,6 +386,7 @@ pub const ZRenderSystem = struct {
     textureSpots: std.ArrayList(TextureHandle),
     textureUnit: c.kinc_g4_texture_unit,
     transformLocation: c.kinc_g4_constant_location,
+    // Things that should be considered public members
     allocator: std.mem.Allocator,
     /// Runs for every rendered frame, right before ZRender draws all of the objects.
     onFrame: ecs.Signal(OnFrameEventArgs),
@@ -317,6 +416,70 @@ pub const OnUpdateEventArgs = struct {
     // The current time, in microseconds
     time: i64,
     registries: *zengine.RegistrySet,
+};
+
+pub const MouseEnterWindowEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+};
+
+pub const MouseExitWindowEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+};
+
+pub const MousePressEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+    // TODO: enum
+    button: u8,
+    x: i32,
+    y: i32,
+};
+
+pub const MouseReleaseEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+    // TODO: enum
+    button: u8,
+    x: i32,
+    y: i32,
+};
+
+pub const MouseMoveEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+    x: i32,
+    y: i32,
+    deltax: i32,
+    deltay: i32,
+};
+
+pub const MouseScrollEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+    delta: i32,
+};
+
+pub const KeyDownEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+    // TODO: enum
+    key: i32,
+};
+
+pub const KeyUpEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+    // TODO: enum
+    key: i32,
+};
+
+pub const TypeEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+    /// Note: this character is probably a unicode point, but it might not be.
+    character: i32,
 };
 
 const Mesh = struct {
