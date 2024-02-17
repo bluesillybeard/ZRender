@@ -73,6 +73,15 @@ pub const ZRenderSystem = struct {
             .onUpdate = ecs.Signal(OnUpdateEventArgs).init(heapAllocator),
             .updateTime = std.time.microTimestamp(),
             .lastFrameTime = std.time.microTimestamp(),
+            .onMouseEnterWindow = ecs.Signal(OnMouseEnterWindowEventArgs).init(heapAllocator),
+            .onMouseLeaveWindow = ecs.Signal(OnMouseLeaveWindowEventArgs).init(heapAllocator),
+            .onMousePress = ecs.Signal(OnMousePressEventArgs).init(heapAllocator),
+            .onMouseRelease = ecs.Signal(OnMouseReleaseEventArgs).init(heapAllocator),
+            .onMouseMove = ecs.Signal(OnMouseMoveEventArgs).init(heapAllocator),
+            .onMouseScroll = ecs.Signal(OnMouseScrollEventArgs).init(heapAllocator),
+            .onKeyDown = ecs.Signal(OnKeyDownEventArgs).init(heapAllocator),
+            .onKeyUp = ecs.Signal(OnKeyUpEventArgs).init(heapAllocator),
+            .onType = ecs.Signal(OnTypeEventArgs).init(heapAllocator),
         };
     }
 
@@ -95,6 +104,15 @@ pub const ZRenderSystem = struct {
         this.textureSpots.deinit();
         this.onFrame.deinit();
         this.onUpdate.deinit();
+        this.onMouseEnterWindow.deinit();
+        this.onMouseLeaveWindow.deinit();
+        this.onMousePress.deinit();
+        this.onMouseRelease.deinit();
+        this.onMouseMove.deinit();
+        this.onMouseScroll.deinit();
+        this.onKeyDown.deinit();
+        this.onKeyUp.deinit();
+        this.onType.deinit();
     }
 
     fn initZRender(this: *@This(), registries: *zengine.RegistrySet) !void {
@@ -171,54 +189,74 @@ pub const ZRenderSystem = struct {
     }
 
     fn mouse_enter_window(window: c_int, data: ?*anyopaque) callconv(.C) void {
+        _ = window;
         const registries = r(data);
         const this = t(registries);
-        _ = this;
-        // my lsp is having a ceisure rn
-
-        _ = window;
-        // TODO
+        this.onMouseEnterWindow.publish(OnMouseEnterWindowEventArgs{
+            .time = this.lastFrameTime,
+            .registries = registries,
+        });
     }
 
     fn mouse_leave_window(window: c_int, data: ?*anyopaque) callconv(.C) void {
         _ = window;
-        _ = data;
-        // TODO
+        const registries = r(data);
+        const this = t(registries);
+        this.onMouseLeaveWindow.publish(.{
+            .time = this.lastFrameTime,
+            .registries = registries,
+        });
     }
 
     fn mouse_press(window: c_int, button: c_int, x: c_int, y: c_int, data: ?*anyopaque) callconv(.C) void {
         _ = window;
-        _ = button;
-        _ = x;
-        _ = y;
-        _ = data;
-        // TODO
+        const registries = r(data);
+        const this = t(registries);
+        this.onMousePress.publish(.{
+            .time = this.lastFrameTime,
+            .registries = registries,
+            .button = @intCast(button),
+            .x = @intCast(x),
+            .y = @intCast(y),
+        });
     }
 
     fn mouse_release(window: c_int, button: c_int, x: c_int, y: c_int, data: ?*anyopaque) callconv(.C) void {
         _ = window;
-        _ = button;
-        _ = x;
-        _ = y;
-        _ = data;
-        // TODO
+        const registries = r(data);
+        const this = t(registries);
+        this.onMouseRelease.publish(.{
+            .time = this.lastFrameTime,
+            .registries = registries,
+            .button = @intCast(button),
+            .x = @intCast(x),
+            .y = @intCast(y),
+        });
     }
     
     fn mouse_move(window: c_int, x: c_int, y: c_int, mov_x: c_int, mov_y: c_int, data: ?*anyopaque) callconv(.C) void {
         _ = window;
-        _ = x;
-        _ = y;
-        _ = mov_x;
-        _ = mov_y;
-        _ = data;
-        //TODO
+        const registries = r(data);
+        const this = t(registries);
+        this.onMouseMove.publish(.{
+            .time = this.lastFrameTime,
+            .registries = registries,
+            .x = @intCast(x),
+            .y = @intCast(y),
+            .deltax = @intCast(mov_x),
+            .deltay = @intCast(mov_y),
+        });
     }
 
     fn mouse_scroll(window: c_int, delta: c_int, data: ?*anyopaque) callconv(.C) void {
         _ = window;
-        _ = delta;
-        _ = data;
-        // TODO
+        const registries = r(data);
+        const this = t(registries);
+        this.onMouseScroll.publish(.{
+            .time = this.lastFrameTime,
+            .registries = registries,
+            .delta = @intCast(delta),
+        });
     }
 
     // Hmm, strange that key down merges inputs from all windows.
@@ -226,22 +264,34 @@ pub const ZRenderSystem = struct {
     // see if there is a way to differentiate keystrokes between different windows.
     // If not, look into making a PR into Kinc to add it.
     fn key_down(key: c_int, data: ?*anyopaque) callconv(.C) void {
-        _ = key;
-        _ = data;
-        // TODO
+        const registries = r(data);
+        const this = t(registries);
+        this.onKeyDown.publish(.{
+            .time = this.lastFrameTime,
+            .registries = registries,
+            .key = @intCast(key),
+        });
     }
     fn key_up(key: c_int, data: ?*anyopaque) callconv(.C) void {
-        _ = key;
-        _ = data;
-        // TODO
+        const registries = r(data);
+        const this = t(registries);
+        this.onKeyUp.publish(.{
+            .time = this.lastFrameTime,
+            .registries = registries,
+            .key = @intCast(key),
+        });
     }
     
     // What encoding character is supposed to be in is entirely unclear.
     // However, based on minimal testing it appears to be ascii or more likely unicode.
     fn key_press(character: c_uint, data: ?*anyopaque) callconv(.C) void {
-        _ = data;
-        _ = character;
-        // TODO
+        const registries = r(data);
+        const this = t(registries);
+        this.onType.publish(.{
+            .time = this.lastFrameTime,
+            .registries = registries,
+            .character = @intCast(character),
+        });
     }
 
     fn _loadTexture(this: *@This(), data: []const u8) !Texture {
@@ -400,6 +450,15 @@ pub const ZRenderSystem = struct {
     updateTime: i64,
     /// The time when the last frame was rendered
     lastFrameTime: i64,
+    onMouseEnterWindow: ecs.Signal(OnMouseEnterWindowEventArgs),
+    onMouseLeaveWindow: ecs.Signal(OnMouseLeaveWindowEventArgs),
+    onMousePress: ecs.Signal(OnMousePressEventArgs),
+    onMouseRelease: ecs.Signal(OnMouseReleaseEventArgs),
+    onMouseMove: ecs.Signal(OnMouseMoveEventArgs),
+    onMouseScroll: ecs.Signal(OnMouseScrollEventArgs),
+    onKeyDown: ecs.Signal(OnKeyDownEventArgs),
+    onKeyUp: ecs.Signal(OnKeyUpEventArgs),
+    onType: ecs.Signal(OnTypeEventArgs),
 };
 
 pub const OnFrameEventArgs = struct {
@@ -418,26 +477,17 @@ pub const OnUpdateEventArgs = struct {
     registries: *zengine.RegistrySet,
 };
 
-pub const MouseEnterWindowEventArgs = struct {
+pub const OnMouseEnterWindowEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
 };
 
-pub const MouseExitWindowEventArgs = struct {
+pub const OnMouseLeaveWindowEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
 };
 
-pub const MousePressEventArgs = struct {
-    time: i64,
-    registries: *zengine.RegistrySet,
-    // TODO: enum
-    button: u8,
-    x: i32,
-    y: i32,
-};
-
-pub const MouseReleaseEventArgs = struct {
+pub const OnMousePressEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
     // TODO: enum
@@ -446,7 +496,16 @@ pub const MouseReleaseEventArgs = struct {
     y: i32,
 };
 
-pub const MouseMoveEventArgs = struct {
+pub const OnMouseReleaseEventArgs = struct {
+    time: i64,
+    registries: *zengine.RegistrySet,
+    // TODO: enum
+    button: u8,
+    x: i32,
+    y: i32,
+};
+
+pub const OnMouseMoveEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
     x: i32,
@@ -455,27 +514,27 @@ pub const MouseMoveEventArgs = struct {
     deltay: i32,
 };
 
-pub const MouseScrollEventArgs = struct {
+pub const OnMouseScrollEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
     delta: i32,
 };
 
-pub const KeyDownEventArgs = struct {
+pub const OnKeyDownEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
     // TODO: enum
     key: i32,
 };
 
-pub const KeyUpEventArgs = struct {
+pub const OnKeyUpEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
     // TODO: enum
     key: i32,
 };
 
-pub const TypeEventArgs = struct {
+pub const OnTypeEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
     /// Note: this character is probably a unicode point, but it might not be.
