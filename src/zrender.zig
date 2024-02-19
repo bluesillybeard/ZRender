@@ -14,16 +14,14 @@ const c = @cImport({
     @cInclude("kinc/input/mouse.h");
 });
 
-pub const RenderComponent = struct {
-    mesh: MeshHandle,
-    texture: TextureHandle,
-    transform: Mat4
-};
+pub const RenderComponent = struct { mesh: MeshHandle, texture: TextureHandle, transform: Mat4 };
 
 pub const Vertex = extern struct {
-    x: f32, y: f32, z: f32,
-    texX: f32, texY: f32,
-    /// Red is the least significant byte, Alpha is the most significant
+    x: f32,
+    y: f32,
+    z: f32,
+    texX: f32,
+    texY: f32,
     color: u32,
     /// 0 -> texture, 1 -> color
     blend: f32,
@@ -34,16 +32,40 @@ pub const MeshHandle = usize;
 pub const TextureHandle = usize;
 
 pub const Mat4 = extern struct {
-    m00: f32, m01: f32, m02: f32, m03: f32,
-    m10: f32, m11: f32, m12: f32, m13: f32,
-    m20: f32, m21: f32, m22: f32, m23: f32,
-    m30: f32, m31: f32, m32: f32, m33: f32,
+    m00: f32,
+    m01: f32,
+    m02: f32,
+    m03: f32,
+    m10: f32,
+    m11: f32,
+    m12: f32,
+    m13: f32,
+    m20: f32,
+    m21: f32,
+    m22: f32,
+    m23: f32,
+    m30: f32,
+    m31: f32,
+    m32: f32,
+    m33: f32,
 
     pub const identity = Mat4{
-        .m00 = 1, .m01 = 0, .m02 = 0, .m03 = 0,
-        .m10 = 0, .m11 = 1, .m12 = 0, .m13 = 0,
-        .m20 = 0, .m21 = 0, .m22 = 1, .m23 = 0,
-        .m30 = 0, .m31 = 0, .m32 = 0, .m33 = 1,
+        .m00 = 1,
+        .m01 = 0,
+        .m02 = 0,
+        .m03 = 0,
+        .m10 = 0,
+        .m11 = 1,
+        .m12 = 0,
+        .m13 = 0,
+        .m20 = 0,
+        .m21 = 0,
+        .m22 = 1,
+        .m23 = 0,
+        .m30 = 0,
+        .m31 = 0,
+        .m32 = 0,
+        .m33 = 1,
     };
 };
 
@@ -154,7 +176,7 @@ pub const ZRenderSystem = struct {
         const texture = try this._loadTexture(data);
         // get a free handle
         const handle = blk: {
-            if(this.textureSpots.items.len > 0){
+            if (this.textureSpots.items.len > 0) {
                 break :blk this.textureSpots.pop();
             } else {
                 const temp = this.textures.items.len;
@@ -166,11 +188,19 @@ pub const ZRenderSystem = struct {
         return handle;
     }
 
+    pub fn unloadTexture(this: *@This(), handle: TextureHandle) void {
+        const texture = this.textures.items[handle].?;
+        this.textureSpots.append(handle);
+        this.textures.items[handle] = null;
+        this._unloadTexture(texture);
+        return;
+    }
+
     pub fn loadMesh(this: *@This(), vertices: []const Vertex, indices: []const u16) !MeshHandle {
         const mesh = this._loadMesh(vertices, indices);
         // get a free handle
         const handle = blk: {
-            if(this.meshes.items.len > 0){
+            if (this.meshes.items.len > 0) {
                 break :blk this.meshSpots.pop();
             } else {
                 const temp = this.textures.items.len;
@@ -180,6 +210,14 @@ pub const ZRenderSystem = struct {
         };
         this.meshes.items[handle] = mesh;
         return handle;
+    }
+
+    pub fn unloadMesh(this: *@This(), handle: MeshHandle) void {
+        const mesh = this.meshes.items[handle].?;
+        this.meshSpots.append(handle);
+        this.meshes.items[handle] = null;
+        this._unloadMesh(mesh);
+        return mesh;
     }
 
     // The rest of the API is basically a bunch of wrappers over Kinc functions
@@ -233,7 +271,7 @@ pub const ZRenderSystem = struct {
             .y = @intCast(y),
         });
     }
-    
+
     fn mouse_move(window: c_int, x: c_int, y: c_int, mov_x: c_int, mov_y: c_int, data: ?*anyopaque) callconv(.C) void {
         _ = window;
         const registries = r(data);
@@ -269,7 +307,7 @@ pub const ZRenderSystem = struct {
         this.onKeyDown.publish(.{
             .time = this.lastFrameTime,
             .registries = registries,
-            .key = @intCast(key),
+            .key = @enumFromInt(key),
         });
     }
     fn key_up(key: c_int, data: ?*anyopaque) callconv(.C) void {
@@ -278,10 +316,10 @@ pub const ZRenderSystem = struct {
         this.onKeyUp.publish(.{
             .time = this.lastFrameTime,
             .registries = registries,
-            .key = @intCast(key),
+            .key = @enumFromInt(key),
         });
     }
-    
+
     // What encoding character is supposed to be in is entirely unclear.
     // However, based on minimal testing it appears to be ascii or more likely unicode.
     fn key_press(character: c_uint, data: ?*anyopaque) callconv(.C) void {
@@ -307,6 +345,10 @@ pub const ZRenderSystem = struct {
         };
     }
 
+    fn _unloadTexture(texture: Texture) void {
+        c.kinc_g4_texture_destroy(texture.texture);
+    }
+
     fn _loadMesh(this: *@This(), vertices: []const Vertex, indices: []const u16) Mesh {
         var mesh = Mesh{};
         c.kinc_g4_vertex_buffer_init(&mesh.vertices, @intCast(vertices.len), &this.structure, c.KINC_G4_USAGE_STATIC, 0);
@@ -319,6 +361,11 @@ pub const ZRenderSystem = struct {
         @memcpy(i, indices);
         c.kinc_g4_index_buffer_unlock_all(&mesh.indices);
         return mesh;
+    }
+
+    fn _unloadMesh(mesh: Mesh) void {
+        c.kinc_g4_vertex_buffer_destroy(mesh.vertices);
+        c.kinc_g4_index_buffer_destroy(mesh.indices);
     }
 
     fn mat4ToKinc(matrix: Mat4) c.kinc_matrix4x4 {
@@ -361,11 +408,11 @@ pub const ZRenderSystem = struct {
         });
 
         // If the update time too far behind, skip ahead. This effectively slows down the game to what the computer can handle.
-        if(realTime - this.updateTime > this.maxUpdateLag) {
+        if (realTime - this.updateTime > this.maxUpdateLag) {
             this.updateTime = realTime - this.updateDelta;
         }
         // Update until the update time has caught up
-        while(realTime - this.updateTime >= this.updateDelta) {
+        while (realTime - this.updateTime >= this.updateDelta) {
             this.updateTime += this.updateDelta;
             this.onUpdate.publish(.{
                 .delta = this.updateDelta,
@@ -379,19 +426,19 @@ pub const ZRenderSystem = struct {
         c.kinc_g4_set_pipeline(&this.pipeline);
         // Draw everything in the global registry
         const view = registries.globalEcsRegistry.basicView(RenderComponent);
-        for(view.raw()) |object| {
+        for (view.raw()) |object| {
             this.drawItem(object);
         }
         // And everything in all of the local registries
-        for(registries.localEcsRegistry.items) |*localEcsRegistryOrNone| {
-            if(localEcsRegistryOrNone.* == null) continue;
+        for (registries.localEcsRegistry.items) |*localEcsRegistryOrNone| {
+            if (localEcsRegistryOrNone.* == null) continue;
             const localEcsRegistry = &localEcsRegistryOrNone.*.?;
             const localView = localEcsRegistry.basicView(RenderComponent);
-            for(localView.raw()) |object| {
+            for (localView.raw()) |object| {
                 this.drawItem(object);
             }
         }
-        
+
         c.kinc_g4_end(0);
         _ = c.kinc_g4_swap_buffers();
     }
@@ -400,14 +447,14 @@ pub const ZRenderSystem = struct {
         var transform = mat4ToKinc(object.transform);
         c.kinc_g4_set_matrix4(this.transformLocation, &transform);
         const textureOrNone = &this.textures.items[object.texture];
-        if(textureOrNone.* == null){
+        if (textureOrNone.* == null) {
             std.debug.print("Invalid texture recieved! Skipping object.", .{});
             return;
         }
         const texture = &textureOrNone.*.?;
         c.kinc_g4_set_texture(this.textureUnit, &texture.texture);
         const meshOrNone = &this.meshes.items[object.mesh];
-        if(meshOrNone.* == null){
+        if (meshOrNone.* == null) {
             std.debug.print("Invalid mesh recieved! Skipping object.", .{});
             return;
         }
@@ -417,9 +464,8 @@ pub const ZRenderSystem = struct {
         c.kinc_g4_draw_indexed_vertices();
     }
 
-
     inline fn r(data: ?*anyopaque) *zengine.RegistrySet {
-        if(data == null) @panic("Something is very very very wrong");
+        if (data == null) @panic("Something is very very very wrong");
         return @as(*zengine.RegistrySet, @alignCast(@ptrCast(data)));
     }
 
@@ -523,15 +569,13 @@ pub const OnMouseScrollEventArgs = struct {
 pub const OnKeyDownEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
-    // TODO: enum
-    key: i32,
+    key: KeyCode,
 };
 
 pub const OnKeyUpEventArgs = struct {
     time: i64,
     registries: *zengine.RegistrySet,
-    // TODO: enum
-    key: i32,
+    key: KeyCode,
 };
 
 pub const OnTypeEventArgs = struct {
@@ -548,4 +592,196 @@ const Mesh = struct {
 
 const Texture = struct {
     texture: c.kinc_g4_texture = .{},
+};
+
+const KeyCode = enum(u32) {
+    Unknown = 0,
+    Back = 1,
+    Cancel = 3,
+    Help = 6,
+    Backspace = 8,
+    Tab = 9,
+    Clear = 12,
+    Return = 13,
+    Shift = 16,
+    Control = 17,
+    Alt = 18,
+    Pause = 19,
+    CapsLock = 20,
+    //Kana = 21,
+    Hangul = 21,
+    Eisu = 22,
+    Junja = 23,
+    Final = 24,
+    //Hanja = 25,
+    Kanji = 25,
+    Escape = 27,
+    Convert = 28,
+    NonConvert = 29,
+    Accept = 30,
+    ModeChange = 31,
+    Space = 32,
+    PageUp = 33,
+    PageDown = 34,
+    End = 35,
+    Home = 36,
+    Left = 37,
+    Up = 38,
+    Right = 39,
+    Down = 40,
+    Select = 41,
+    Print = 42,
+    Execute = 43,
+    PrintScreen = 44,
+    Insert = 45,
+    Delete = 46,
+    @"0" = 48,
+    @"1" = 49,
+    @"2" = 50,
+    @"3" = 51,
+    @"4" = 52,
+    @"5" = 53,
+    @"6" = 54,
+    @"7" = 55,
+    @"8" = 56,
+    @"9" = 57,
+    Colon = 58,
+    Semicolon = 59,
+    LessThan = 60,
+    Equals = 61,
+    GreaterThan = 62,
+    Questionmark = 63,
+    At = 64,
+    A = 65,
+    B = 66,
+    C = 67,
+    D = 68,
+    E = 69,
+    F = 70,
+    G = 71,
+    H = 72,
+    I = 73,
+    J = 74,
+    K = 75,
+    L = 76,
+    M = 77,
+    N = 78,
+    O = 79,
+    P = 80,
+    Q = 81,
+    R = 82,
+    S = 83,
+    T = 84,
+    U = 85,
+    V = 86,
+    W = 87,
+    X = 88,
+    Y = 89,
+    Z = 90,
+    Win = 91,
+    ContextMenu = 93,
+    Sleep = 95,
+    Numpad0 = 96,
+    Numpad1 = 97,
+    Numpad2 = 98,
+    Numpad3 = 99,
+    Numpad4 = 100,
+    Numpad5 = 101,
+    Numpad6 = 102,
+    Numpad7 = 103,
+    Numpad8 = 104,
+    Numpad9 = 105,
+    Multiply = 106,
+    Add = 107,
+    Separator = 108,
+    Subtract = 109,
+    Decimal = 110,
+    Divide = 111,
+    F1 = 112,
+    F2 = 113,
+    F3 = 114,
+    F4 = 115,
+    F5 = 116,
+    F6 = 117,
+    F7 = 118,
+    F8 = 119,
+    F9 = 120,
+    F10 = 121,
+    F11 = 122,
+    F12 = 123,
+    F13 = 124,
+    F14 = 125,
+    F15 = 126,
+    F16 = 127,
+    F17 = 128,
+    F18 = 129,
+    F19 = 130,
+    F20 = 131,
+    F21 = 132,
+    F22 = 133,
+    F23 = 134,
+    F24 = 135,
+    NumLock = 144,
+    ScrollLock = 145,
+    // TODO: find a better name for these
+    WIN_OEM_FJ_JISHO = 146,
+    WIN_OEM_FJ_MASSHOU = 147,
+    WIN_OEM_FJ_TOUROKU = 148,
+    WIN_OEM_FJ_LOYA = 149,
+    WIN_OEM_FJ_ROYA = 150,
+    Circumflex = 160,
+    Exclamation = 161,
+    DoubleQuite = 162,
+    Hash = 163,
+    Dollar = 164,
+    Percent = 165,
+    Amperstand = 166,
+    Underscore = 167,
+    OpenParen = 168,
+    CloseParen = 169,
+    Asterisk = 170,
+    Plus = 171,
+    Pipe = 172,
+    HyphenMinus = 173,
+    OpenCurlyBracket = 174,
+    CloseCurlyBracket = 175,
+    Tilde = 176,
+    VolumeMute = 181,
+    VolumeDown = 182,
+    VolumeUp = 183,
+    Comma = 188,
+    Period = 190,
+    Slash = 191,
+    BackQuote = 192,
+    OpenBracket = 219,
+    BackSlash = 220,
+    CloseBracket = 221,
+    Quote = 222,
+    Meta = 224,
+    // TODO: find a better name for these
+    ALT_GR = 225,
+    WIN_ICO_HELP = 227,
+    WIN_ICO_00 = 228,
+    WIN_ICO_CLEAR = 230,
+    WIN_OEM_RESET = 233,
+    WIN_OEM_JUMP = 234,
+    WIN_OEM_PA1 = 235,
+    WIN_OEM_PA2 = 236,
+    WIN_OEM_PA3 = 237,
+    WIN_OEM_WSCTRL = 238,
+    WIN_OEM_CUSEL = 239,
+    WIN_OEM_ATTN = 240,
+    WIN_OEM_FINISH = 241,
+    WIN_OEM_COPY = 242,
+    WIN_OEM_AUTO = 243,
+    WIN_OEM_ENLW = 244,
+    WIN_OEM_BACK_TAB = 245,
+    ATTN = 246,
+    CRSEL = 247,
+    EXSEL = 248,
+    EREOF = 249,
+    Play = 250,
+    Zoom = 251,
+    PA1 = 253,
+    WIN_OEM_CLEAR = 254,
 };
