@@ -1,4 +1,4 @@
-# ZRender - Official rendering module for ZEngine
+# ZRender - Official rendering module for [ZEngine](https://github.com/bluesillybeard/ZEngine)
 
 Currently, it is extremely simple - a draw component is simply these things:
 - Handle to a 3D mesh
@@ -17,4 +17,4 @@ Currently, it is extremely simple - a draw component is simply these things:
 You're on your own in this regard. [zlm](https://github.com/ziglibs/zlm) is a good option for doing linear mathematics.
 
 ## Examples
-For examples, see the [ZEngineExamples repository](https://github.com/bluesillybeard/ZEngineExamples).
+For examples, see [ZEngineExamples](https://github.com/bluesillybeard/ZEngineExamples).
