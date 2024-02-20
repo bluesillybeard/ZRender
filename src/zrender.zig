@@ -488,10 +488,10 @@ pub const ZRenderSystem = struct {
     onFrame: ecs.Signal(OnFrameEventArgs),
     /// Runs at a constant rate, which is configurable.
     onUpdate: ecs.Signal(OnUpdateEventArgs),
-    /// In microseconds. 60 hertz by default.
-    updateDelta: i64 = std.time.us_per_s / 60,
+    /// In microseconds. 30 hertz by default.
+    updateDelta: i64 = std.time.us_per_s / 30,
     /// The maximum amount of lag between the real time and update time, in microseconds
-    maxUpdateLag: i64 = std.time.us_per_s / 30,
+    maxUpdateLag: i64 = std.time.us_per_s / 10,
     /// The current time in terms of the application, microseconds
     updateTime: i64,
     /// The time when the last frame was rendered
