@@ -27,7 +27,11 @@ pub const Vertex = extern struct {
     blend: f32,
 };
 
-pub const MeshHandle = usize;
+pub const MeshHandle = struct {
+    rawHandle: usize,
+    numVertices: usize,
+    numIndices: usize,
+};
 
 pub const TextureHandle = usize;
 
@@ -157,6 +161,7 @@ pub const ZRenderSystem = struct {
         this.pipeline.fragment_shader = &fragment_shader;
         this.pipeline.input_layout[0] = &this.structure;
         this.pipeline.input_layout[1] = null;
+        this.pipeline.depth_mode = c.KINC_G4_COMPARE_GREATER;
         c.kinc_g4_pipeline_compile(&this.pipeline);
         this.textureUnit = c.kinc_g4_pipeline_get_texture_unit(&this.pipeline, "tex");
         this.transformLocation = c.kinc_g4_pipeline_get_constant_location(&this.pipeline, "transform");
@@ -199,23 +204,53 @@ pub const ZRenderSystem = struct {
     pub fn loadMesh(this: *@This(), vertices: []const Vertex, indices: []const u16) !MeshHandle {
         const mesh = this._loadMesh(vertices, indices);
         // get a free handle
-        const handle = blk: {
+        const rawHandle = blk: {
             if (this.meshes.items.len > 0) {
-                break :blk this.meshSpots.pop();
+                break :blk this.meshSpots.pop().rawHandle;
             } else {
                 const temp = this.textures.items.len;
                 _ = try this.meshes.addOne();
                 break :blk temp;
             }
         };
-        this.meshes.items[handle] = mesh;
-        return handle;
+        this.meshes.items[rawHandle] = mesh;
+        return MeshHandle{
+            .rawHandle = rawHandle,
+            .numVertices = vertices.len,
+            .numIndices = indices.len,
+        };
+    }
+
+    pub fn mapMeshVertices(this: *@This(), handle: MeshHandle, startVertex: usize, count: usize) []Vertex {
+        var mesh = this.meshes.items[handle.rawHandle].?;
+        var data: []Vertex = undefined;
+        data.ptr = @ptrCast(c.kinc_g4_vertex_buffer_lock(&mesh.vertices, @intCast(startVertex), @intCast(count)));
+        data.len = count;
+        return data;
+    }
+
+    pub fn unmapMeshVertices(this: *@This(), handle: MeshHandle, vertices: []Vertex) void {
+        var mesh = this.meshes.items[handle.rawHandle].?;
+        c.kinc_g4_vertex_buffer_unlock(&mesh.vertices, @intCast(vertices.len));
+    }
+
+    pub fn mapMeshIndices(this: *@This(), handle: MeshHandle, startIndex: usize, count: usize) []u16 {
+        var mesh = this.meshes.items[handle.rawHandle].?;
+        var data: []u16 = undefined;
+        data.ptr = @alignCast(@ptrCast(c.kinc_g4_index_buffer_lock(&mesh.indices, @intCast(startIndex), @intCast(count))));
+        data.len = count;
+        return data;
+    }
+
+    pub fn unmapMeshIndices(this: *@This(), handle: MeshHandle, indices: []u16) void {
+        var mesh = this.meshes.items[handle.rawHandle].?;
+        c.kinc_g4_index_buffer_unlock(&mesh.indices, @intCast(indices.len));
     }
 
     pub fn unloadMesh(this: *@This(), handle: MeshHandle) void {
-        const mesh = this.meshes.items[handle].?;
-        this.meshSpots.append(handle);
-        this.meshes.items[handle] = null;
+        const mesh = this.meshes.items[handle.rawHandle].?;
+        this.meshSpots.append(handle.rawHandle);
+        this.meshes.items[handle.rawHandle] = null;
         this._unloadMesh(mesh);
         return mesh;
     }
@@ -297,10 +332,6 @@ pub const ZRenderSystem = struct {
         });
     }
 
-    // Hmm, strange that key down merges inputs from all windows.
-    // TODO: When adding multiwindowing to ZRender,
-    // see if there is a way to differentiate keystrokes between different windows.
-    // If not, look into making a PR into Kinc to add it.
     fn key_down(key: c_int, data: ?*anyopaque) callconv(.C) void {
         const registries = r(data);
         const this = t(registries);
@@ -453,7 +484,7 @@ pub const ZRenderSystem = struct {
         }
         const texture = &textureOrNone.*.?;
         c.kinc_g4_set_texture(this.textureUnit, &texture.texture);
-        const meshOrNone = &this.meshes.items[object.mesh];
+        const meshOrNone = &this.meshes.items[object.mesh.rawHandle];
         if (meshOrNone.* == null) {
             std.debug.print("Invalid mesh recieved! Skipping object.", .{});
             return;
