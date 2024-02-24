@@ -14,7 +14,7 @@ const c = @cImport({
     @cInclude("kinc/input/mouse.h");
 });
 
-pub const RenderComponent = struct { mesh: MeshHandle, texture: TextureHandle, transform: Mat4 };
+pub const RenderComponent = struct { mesh: MeshHandle, texture: TextureHandle, pipeline: PipelineHandle, transform: Mat4 };
 
 pub const Vertex = extern struct {
     x: f32,
@@ -34,6 +34,8 @@ pub const MeshHandle = struct {
 };
 
 pub const TextureHandle = usize;
+
+pub const PipelineHandle = usize;
 
 pub const Mat4 = extern struct {
     m00: f32,
@@ -86,14 +88,12 @@ pub const ZRenderSystem = struct {
     pub fn init(staticAllocator: std.mem.Allocator, heapAllocator: std.mem.Allocator) @This() {
         _ = staticAllocator;
         return ZRenderSystem{
-            .structure = .{},
-            .pipeline = .{},
+            .pipelines = std.ArrayList(?Pipeline).init(heapAllocator),
+            .pipelineSpots = std.ArrayList(usize).init(heapAllocator),
             .meshes = std.ArrayList(?Mesh).init(heapAllocator),
-            .meshSpots = std.ArrayList(MeshHandle).init(heapAllocator),
+            .meshSpots = std.ArrayList(usize).init(heapAllocator),
             .textures = std.ArrayList(?Texture).init(heapAllocator),
             .textureSpots = std.ArrayList(TextureHandle).init(heapAllocator),
-            .textureUnit = .{},
-            .transformLocation = .{},
             .allocator = heapAllocator,
             .onFrame = ecs.Signal(OnFrameEventArgs).init(heapAllocator),
             .onUpdate = ecs.Signal(OnUpdateEventArgs).init(heapAllocator),
@@ -124,6 +124,8 @@ pub const ZRenderSystem = struct {
     }
 
     pub fn deinit(this: *@This()) void {
+        this.pipelines.deinit();
+        this.pipelineSpots.deinit();
         this.meshes.deinit();
         this.meshSpots.deinit();
         this.textures.deinit();
@@ -142,29 +144,9 @@ pub const ZRenderSystem = struct {
     }
 
     fn initZRender(this: *@This(), registries: *zengine.RegistrySet) !void {
-        var vertex_shader: c.kinc_g4_shader_t = .{};
-        var fragment_shader: c.kinc_g4_shader_t = .{};
-        _ = c.kinc_init("Shader", 1024, 768, null, null);
+        _ = this;
+        _ = c.kinc_init("ZRender", 1024, 768, null, null);
         c.kinc_set_update_callback(&update, registries);
-        const vertexShaderCode = @embedFile("shaderBin/shader.vert");
-        c.kinc_g4_shader_init(&vertex_shader, vertexShaderCode.ptr, vertexShaderCode.len, c.KINC_G4_SHADER_TYPE_VERTEX);
-        const fragmentShaderCode = @embedFile("shaderBin/shader.frag");
-        c.kinc_g4_shader_init(&fragment_shader, fragmentShaderCode.ptr, fragmentShaderCode.len, c.KINC_G4_SHADER_TYPE_FRAGMENT);
-
-        c.kinc_g4_vertex_structure_init(&this.structure);
-        c.kinc_g4_vertex_structure_add(&this.structure, "pos", c.KINC_G4_VERTEX_DATA_F32_3X);
-        c.kinc_g4_vertex_structure_add(&this.structure, "texCoord", c.KINC_G4_VERTEX_DATA_F32_2X);
-        c.kinc_g4_vertex_structure_add(&this.structure, "color", c.KINC_G4_VERTEX_DATA_U8_4X_NORMALIZED);
-        c.kinc_g4_vertex_structure_add(&this.structure, "blend", c.KINC_G4_VERTEX_DATA_F32_1X);
-        c.kinc_g4_pipeline_init(&this.pipeline);
-        this.pipeline.vertex_shader = &vertex_shader;
-        this.pipeline.fragment_shader = &fragment_shader;
-        this.pipeline.input_layout[0] = &this.structure;
-        this.pipeline.input_layout[1] = null;
-        this.pipeline.depth_mode = c.KINC_G4_COMPARE_GREATER;
-        c.kinc_g4_pipeline_compile(&this.pipeline);
-        this.textureUnit = c.kinc_g4_pipeline_get_texture_unit(&this.pipeline, "tex");
-        this.transformLocation = c.kinc_g4_pipeline_get_constant_location(&this.pipeline, "transform");
 
         c.kinc_mouse_set_enter_window_callback(&mouse_enter_window, registries);
         c.kinc_mouse_set_leave_window_callback(&mouse_leave_window, registries);
@@ -201,12 +183,13 @@ pub const ZRenderSystem = struct {
         return;
     }
 
-    pub fn loadMesh(this: *@This(), vertices: []const Vertex, indices: []const u16) !MeshHandle {
-        const mesh = this._loadMesh(vertices, indices);
+    pub fn loadMesh(this: *@This(), vertices: []const Vertex, indices: []const u16, pipelineHandle: PipelineHandle) !MeshHandle {
+        const pipeline = &this.pipelines.items[pipelineHandle].?;
+        const mesh = this._loadMesh(vertices, indices, pipeline);
         // get a free handle
         const rawHandle = blk: {
             if (this.meshes.items.len > 0) {
-                break :blk this.meshSpots.pop().rawHandle;
+                break :blk this.meshSpots.pop();
             } else {
                 const temp = this.textures.items.len;
                 _ = try this.meshes.addOne();
@@ -253,6 +236,44 @@ pub const ZRenderSystem = struct {
         this.meshes.items[handle.rawHandle] = null;
         this._unloadMesh(mesh);
         return mesh;
+    }
+
+    // TODO: make vertex attributes and uniforms configurable
+    pub fn createPipeline(this: *@This(), vertexShaderBinary: []const u8, fragmentShaderBinary: []const u8) !PipelineHandle {
+        // get a free handle
+        const rawHandle = blk: {
+            if (this.pipelineSpots.items.len > 0) {
+                break :blk this.pipelineSpots.pop();
+            } else {
+                const temp = this.pipelines.items.len;
+                _ = try this.pipelines.addOne();
+                break :blk temp;
+            }
+        };
+        var pipeline: Pipeline = undefined;
+        var vertexShader: c.kinc_g4_shader = undefined;
+        var fragmentShader: c.kinc_g4_shader = undefined;
+
+        c.kinc_g4_shader_init(&vertexShader, vertexShaderBinary.ptr, vertexShaderBinary.len, c.KINC_G4_SHADER_TYPE_VERTEX);
+        c.kinc_g4_shader_init(&fragmentShader, fragmentShaderBinary.ptr, fragmentShaderBinary.len, c.KINC_G4_SHADER_TYPE_FRAGMENT);
+
+        c.kinc_g4_vertex_structure_init(&pipeline.structure);
+        c.kinc_g4_vertex_structure_add(&pipeline.structure, "pos", c.KINC_G4_VERTEX_DATA_F32_3X);
+        c.kinc_g4_vertex_structure_add(&pipeline.structure, "texCoord", c.KINC_G4_VERTEX_DATA_F32_2X);
+        c.kinc_g4_vertex_structure_add(&pipeline.structure, "color", c.KINC_G4_VERTEX_DATA_U8_4X_NORMALIZED);
+        c.kinc_g4_vertex_structure_add(&pipeline.structure, "blend", c.KINC_G4_VERTEX_DATA_F32_1X);
+        c.kinc_g4_pipeline_init(&pipeline.pipeline);
+        pipeline.pipeline.vertex_shader = &vertexShader;
+        pipeline.pipeline.fragment_shader = &fragmentShader;
+        pipeline.pipeline.input_layout[0] = &pipeline.structure;
+        pipeline.pipeline.input_layout[1] = null;
+        pipeline.pipeline.depth_mode = c.KINC_G4_COMPARE_GREATER;
+        c.kinc_g4_pipeline_compile(&pipeline.pipeline);
+        pipeline.textureUnit = c.kinc_g4_pipeline_get_texture_unit(&pipeline.pipeline, "tex");
+        pipeline.transformLocation = c.kinc_g4_pipeline_get_constant_location(&pipeline.pipeline, "transform");
+
+        this.pipelines.items[rawHandle] = pipeline;
+        return rawHandle;
     }
 
     // The rest of the API is basically a bunch of wrappers over Kinc functions
@@ -380,9 +401,10 @@ pub const ZRenderSystem = struct {
         c.kinc_g4_texture_destroy(texture.texture);
     }
 
-    fn _loadMesh(this: *@This(), vertices: []const Vertex, indices: []const u16) Mesh {
+    fn _loadMesh(this: *@This(), vertices: []const Vertex, indices: []const u16, pipeline: *Pipeline) Mesh {
+        _ = this;
         var mesh = Mesh{};
-        c.kinc_g4_vertex_buffer_init(&mesh.vertices, @intCast(vertices.len), &this.structure, c.KINC_G4_USAGE_STATIC, 0);
+        c.kinc_g4_vertex_buffer_init(&mesh.vertices, @intCast(vertices.len), &pipeline.structure, c.KINC_G4_USAGE_STATIC, 0);
         const v: [*]Vertex = @ptrCast(c.kinc_g4_vertex_buffer_lock_all(&mesh.vertices));
         @memcpy(v, vertices);
         c.kinc_g4_vertex_buffer_unlock_all(&mesh.vertices);
@@ -454,10 +476,9 @@ pub const ZRenderSystem = struct {
 
         c.kinc_g4_begin(0);
         c.kinc_g4_clear(c.KINC_G4_CLEAR_COLOR | c.KINC_G4_CLEAR_DEPTH, 0, 0.0, 0);
-        c.kinc_g4_set_pipeline(&this.pipeline);
         // Draw everything in the global registry
         const view = registries.globalEcsRegistry.basicView(RenderComponent);
-        for (view.raw()) |object| {
+        for (view.raw()) |*object| {
             this.drawItem(object);
         }
         // And everything in all of the local registries
@@ -465,7 +486,7 @@ pub const ZRenderSystem = struct {
             if (localEcsRegistryOrNone.* == null) continue;
             const localEcsRegistry = &localEcsRegistryOrNone.*.?;
             const localView = localEcsRegistry.basicView(RenderComponent);
-            for (localView.raw()) |object| {
+            for (localView.raw()) |*object| {
                 this.drawItem(object);
             }
         }
@@ -474,22 +495,32 @@ pub const ZRenderSystem = struct {
         _ = c.kinc_g4_swap_buffers();
     }
 
-    fn drawItem(this: *@This(), object: RenderComponent) void {
-        var transform = mat4ToKinc(object.transform);
-        c.kinc_g4_set_matrix4(this.transformLocation, &transform);
+    fn drawItem(this: *@This(), object: *RenderComponent) void {
+        const pipelineOrNone = &this.pipelines.items[object.pipeline];
+        if (pipelineOrNone.* == null) {
+            std.debug.print("Invalid pipeline recieved! Skipping object.", .{});
+            return;
+        }
+        const pipeline = &pipelineOrNone.*.?;
+
         const textureOrNone = &this.textures.items[object.texture];
         if (textureOrNone.* == null) {
             std.debug.print("Invalid texture recieved! Skipping object.", .{});
             return;
         }
         const texture = &textureOrNone.*.?;
-        c.kinc_g4_set_texture(this.textureUnit, &texture.texture);
+
         const meshOrNone = &this.meshes.items[object.mesh.rawHandle];
         if (meshOrNone.* == null) {
             std.debug.print("Invalid mesh recieved! Skipping object.", .{});
             return;
         }
         const mesh = &meshOrNone.*.?;
+
+        var transform = mat4ToKinc(object.transform);
+        c.kinc_g4_set_pipeline(&pipeline.pipeline);
+        c.kinc_g4_set_matrix4(pipeline.transformLocation, &transform);
+        c.kinc_g4_set_texture(pipeline.textureUnit, &texture.texture);
         c.kinc_g4_set_vertex_buffer(&mesh.vertices);
         c.kinc_g4_set_index_buffer(&mesh.indices);
         c.kinc_g4_draw_indexed_vertices();
@@ -504,15 +535,12 @@ pub const ZRenderSystem = struct {
         return registries.globalRegistry.getRegister(@This()).?;
     }
     // Things that should be considered private members
-    // pipeline has a reference to structure, so this needs to be stored in a place where its lifetime fully encompasses pipeline's.
-    structure: c.kinc_g4_vertex_structure,
-    pipeline: c.kinc_g4_pipeline,
+    pipelines: std.ArrayList(?Pipeline),
+    pipelineSpots: std.ArrayList(usize),
     meshes: std.ArrayList(?Mesh),
-    meshSpots: std.ArrayList(MeshHandle),
+    meshSpots: std.ArrayList(usize),
     textures: std.ArrayList(?Texture),
     textureSpots: std.ArrayList(TextureHandle),
-    textureUnit: c.kinc_g4_texture_unit,
-    transformLocation: c.kinc_g4_constant_location,
     // Things that should be considered public members
     allocator: std.mem.Allocator,
     /// Runs for every rendered frame, right before ZRender draws all of the objects.
@@ -623,6 +651,14 @@ const Mesh = struct {
 
 const Texture = struct {
     texture: c.kinc_g4_texture = .{},
+};
+
+const Pipeline = struct {
+    pipeline: c.kinc_g4_pipeline,
+    // pipeline has a reference to structure, so it needs to be stored in a place where its lifetime fully encompasses pipeline's.
+    structure: c.kinc_g4_vertex_structure,
+    textureUnit: c.kinc_g4_texture_unit,
+    transformLocation: c.kinc_g4_constant_location,
 };
 
 const KeyCode = enum(u32) {

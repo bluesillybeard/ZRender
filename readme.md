@@ -3,9 +3,8 @@
 Currently, it is extremely simple - a draw component is simply these things:
 - Handle to a 3D mesh
 - Handle to a 2D texture
+- handle to a shader pipeline
 - A 4x4 transform matrix
-
-... And that's it. reprogrammable shaders are not a feature at the moment, and likely won't be for a while unless someone wants to add that feature in a PR.
 
 ## Accepted mesh formats
 - None. Right now, a mesh is created by calling a function with the raw mesh data. Loading meshes from a file will be supported later
