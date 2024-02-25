@@ -16,15 +16,59 @@ const c = @cImport({
 
 pub const RenderComponent = struct { mesh: MeshHandle, texture: TextureHandle, pipeline: PipelineHandle, transform: Mat4 };
 
-pub const Vertex = extern struct {
-    x: f32,
-    y: f32,
-    z: f32,
-    texX: f32,
-    texY: f32,
-    color: u32,
-    /// 0 -> texture, 1 -> color
-    blend: f32,
+pub const VertexAttribute = enum(c_uint) {
+    none = c.KINC_G4_VERTEX_DATA_NONE,
+    /// equivalent to GLSL float
+    f32 = c.KINC_G4_VERTEX_DATA_F32_1X,
+    /// equivalent to GLSL vec2
+    f32x2 = c.KINC_G4_VERTEX_DATA_F32_2X,
+    /// equivalent to GLSL vec3
+    f32x3 = c.KINC_G4_VERTEX_DATA_F32_3X,
+    /// equivalent to GLSL vec4
+    f32x4 = c.KINC_G4_VERTEX_DATA_F32_4X,
+    /// equivalent to GLSL mat4
+    f32x4x4 = c.KINC_G4_VERTEX_DATA_F32_4X4,
+    i8 = c.KINC_G4_VERTEX_DATA_I8_1X,
+    u8 = c.KINC_G4_VERTEX_DATA_U8_1X,
+    i8normalized = c.KINC_G4_VERTEX_DATA_I8_1X_NORMALIZED,
+    u8normalized = c.KINC_G4_VERTEX_DATA_U8_1X_NORMALIZED,
+    i8x2 = c.KINC_G4_VERTEX_DATA_I8_2X,
+    u8x2 = c.KINC_G4_VERTEX_DATA_U8_2X,
+    i8x2normalized = c.KINC_G4_VERTEX_DATA_I8_2X_NORMALIZED,
+    u8x2normalized = c.KINC_G4_VERTEX_DATA_U8_2X_NORMALIZED,
+    i8x4 = c.KINC_G4_VERTEX_DATA_I8_4X,
+    u8x4 = c.KINC_G4_VERTEX_DATA_U8_4X,
+    i8x4normalized = c.KINC_G4_VERTEX_DATA_I8_4X_NORMALIZED,
+    u8x4normalized = c.KINC_G4_VERTEX_DATA_U8_4X_NORMALIZED,
+    i16 = c.KINC_G4_VERTEX_DATA_I16_1X,
+    u16 = c.KINC_G4_VERTEX_DATA_U16_1X,
+    i16normalized = c.KINC_G4_VERTEX_DATA_I16_1X_NORMALIZED,
+    u16normalized = c.KINC_G4_VERTEX_DATA_U16_1X_NORMALIZED,
+    i16x2 = c.KINC_G4_VERTEX_DATA_I16_2X,
+    u16x2 = c.KINC_G4_VERTEX_DATA_U16_2X,
+    i16x2normalized = c.KINC_G4_VERTEX_DATA_I16_2X_NORMALIZED,
+    u16x2normalized = c.KINC_G4_VERTEX_DATA_U16_2X_NORMALIZED,
+    i16x4 = c.KINC_G4_VERTEX_DATA_I16_4X,
+    u16x4 = c.KINC_G4_VERTEX_DATA_U16_4X,
+    i16x4normalized = c.KINC_G4_VERTEX_DATA_I16_4X_NORMALIZED,
+    u16x4normalized = c.KINC_G4_VERTEX_DATA_U16_4X_NORMALIZED,
+    i32 = c.KINC_G4_VERTEX_DATA_I32_1X,
+    u32 = c.KINC_G4_VERTEX_DATA_U32_1X,
+    i32x2 = c.KINC_G4_VERTEX_DATA_I32_2X,
+    u32x2 = c.KINC_G4_VERTEX_DATA_U32_2X,
+    i32x3 = c.KINC_G4_VERTEX_DATA_I32_3X,
+    u32x3 = c.KINC_G4_VERTEX_DATA_U32_3X,
+    i32x4 = c.KINC_G4_VERTEX_DATA_I32_4X,
+    u32x4 = c.KINC_G4_VERTEX_DATA_U32_4X,
+};
+
+pub const NamedVertexAttribute = struct {
+    name: [:0]const u8,
+    type: VertexAttribute,
+};
+
+pub const PipelineArgs = struct {
+    attributes: []const NamedVertexAttribute,
 };
 
 pub const MeshHandle = struct {
@@ -183,9 +227,9 @@ pub const ZRenderSystem = struct {
         return;
     }
 
-    pub fn loadMesh(this: *@This(), vertices: []const Vertex, indices: []const u16, pipelineHandle: PipelineHandle) !MeshHandle {
+    pub fn loadMesh(this: *@This(), Vertex: type, vertices: []const Vertex, indices: []const u16, pipelineHandle: PipelineHandle) !MeshHandle {
         const pipeline = &this.pipelines.items[pipelineHandle].?;
-        const mesh = this._loadMesh(vertices, indices, pipeline);
+        const mesh = this._loadMesh(Vertex, vertices, indices, pipeline);
         // get a free handle
         const rawHandle = blk: {
             if (this.meshes.items.len > 0) {
@@ -204,7 +248,7 @@ pub const ZRenderSystem = struct {
         };
     }
 
-    pub fn mapMeshVertices(this: *@This(), handle: MeshHandle, startVertex: usize, count: usize) []Vertex {
+    pub fn mapMeshVertices(this: *@This(), Vertex: type, handle: MeshHandle, startVertex: usize, count: usize) []Vertex {
         var mesh = this.meshes.items[handle.rawHandle].?;
         var data: []Vertex = undefined;
         data.ptr = @ptrCast(c.kinc_g4_vertex_buffer_lock(&mesh.vertices, @intCast(startVertex), @intCast(count)));
@@ -212,7 +256,7 @@ pub const ZRenderSystem = struct {
         return data;
     }
 
-    pub fn unmapMeshVertices(this: *@This(), handle: MeshHandle, vertices: []Vertex) void {
+    pub fn unmapMeshVertices(this: *@This(), Vertex: type, handle: MeshHandle, vertices: []Vertex) void {
         var mesh = this.meshes.items[handle.rawHandle].?;
         c.kinc_g4_vertex_buffer_unlock(&mesh.vertices, @intCast(vertices.len));
     }
@@ -238,8 +282,7 @@ pub const ZRenderSystem = struct {
         return mesh;
     }
 
-    // TODO: make vertex attributes and uniforms configurable
-    pub fn createPipeline(this: *@This(), vertexShaderBinary: []const u8, fragmentShaderBinary: []const u8) !PipelineHandle {
+    pub fn createPipeline(this: *@This(), vertexShaderBinary: []const u8, fragmentShaderBinary: []const u8, args: PipelineArgs) !PipelineHandle {
         // get a free handle
         const rawHandle = blk: {
             if (this.pipelineSpots.items.len > 0) {
@@ -258,10 +301,10 @@ pub const ZRenderSystem = struct {
         c.kinc_g4_shader_init(&fragmentShader, fragmentShaderBinary.ptr, fragmentShaderBinary.len, c.KINC_G4_SHADER_TYPE_FRAGMENT);
 
         c.kinc_g4_vertex_structure_init(&pipeline.structure);
-        c.kinc_g4_vertex_structure_add(&pipeline.structure, "pos", c.KINC_G4_VERTEX_DATA_F32_3X);
-        c.kinc_g4_vertex_structure_add(&pipeline.structure, "texCoord", c.KINC_G4_VERTEX_DATA_F32_2X);
-        c.kinc_g4_vertex_structure_add(&pipeline.structure, "color", c.KINC_G4_VERTEX_DATA_U8_4X_NORMALIZED);
-        c.kinc_g4_vertex_structure_add(&pipeline.structure, "blend", c.KINC_G4_VERTEX_DATA_F32_1X);
+        for (args.attributes) |attribute| {
+            // The numbers for ZRender match Kinc for a reason
+            c.kinc_g4_vertex_structure_add(&pipeline.structure, attribute.name.ptr, @intFromEnum(attribute.type));
+        }
         c.kinc_g4_pipeline_init(&pipeline.pipeline);
         pipeline.pipeline.vertex_shader = &vertexShader;
         pipeline.pipeline.fragment_shader = &fragmentShader;
@@ -269,6 +312,7 @@ pub const ZRenderSystem = struct {
         pipeline.pipeline.input_layout[1] = null;
         pipeline.pipeline.depth_mode = c.KINC_G4_COMPARE_GREATER;
         c.kinc_g4_pipeline_compile(&pipeline.pipeline);
+        // TODO: custom uniforms
         pipeline.textureUnit = c.kinc_g4_pipeline_get_texture_unit(&pipeline.pipeline, "tex");
         pipeline.transformLocation = c.kinc_g4_pipeline_get_constant_location(&pipeline.pipeline, "transform");
 
@@ -401,7 +445,7 @@ pub const ZRenderSystem = struct {
         c.kinc_g4_texture_destroy(texture.texture);
     }
 
-    fn _loadMesh(this: *@This(), vertices: []const Vertex, indices: []const u16, pipeline: *Pipeline) Mesh {
+    fn _loadMesh(this: *@This(), Vertex: type, vertices: []const Vertex, indices: []const u16, pipeline: *Pipeline) Mesh {
         _ = this;
         var mesh = Mesh{};
         c.kinc_g4_vertex_buffer_init(&mesh.vertices, @intCast(vertices.len), &pipeline.structure, c.KINC_G4_USAGE_STATIC, 0);

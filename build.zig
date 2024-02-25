@@ -21,7 +21,6 @@ pub fn link(comptime modulePath: []const u8, b: *std.Build, zengine: *std.Build.
     const zrender = b.addStaticLibrary(.{
         .name = "zrender",
         .root_source_file = .{ .path = modulePath ++ "/src/zrender.zig" },
-        // TODO: take these as parameters
         .target = options.target,
         .optimize = options.optimize,
     });
