@@ -4,7 +4,7 @@ Currently, it is extremely simple - a draw component is simply these things:
 - Handle to a 3D mesh
 - Handle to a shader pipeline
 - Uniform variables
-- 
+
 ## Accepted mesh formats
 - None. Right now, a mesh is created by calling a function with the raw mesh data. Loading meshes from a file will be supported later
 
