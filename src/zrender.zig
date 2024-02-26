@@ -14,9 +14,49 @@ const c = @cImport({
     @cInclude("kinc/input/mouse.h");
 });
 
-pub const RenderComponent = struct { mesh: MeshHandle, texture: TextureHandle, pipeline: PipelineHandle, transform: Mat4 };
+pub const RenderComponent = struct {
+    mesh: MeshHandle,
+    pipeline: PipelineHandle,
+    // Uniforms are index-matched with the pipeline's uniform arguments.
+    // Using a uniform of the wrong type is undefined behavior
+    uniforms: []Uniform,
+};
 
-pub const VertexAttribute = enum(c_uint) {
+pub const UniformTag = enum {
+    i32,
+    i32x2,
+    i32x3,
+    i32x4,
+    i32s,
+    f32,
+    f32x2,
+    f32x3,
+    f32x4,
+    f32s,
+    bool,
+    mat4,
+    texture,
+};
+
+pub const Uniform = union(UniformTag) {
+    i32: i32,
+    i32x2: [2]i32,
+    i32x3: [3]i32,
+    i32x4: [4]i32,
+    /// Warning about managing memory and stuff
+    i32s: []const i32,
+    f32: f32,
+    f32x2: [2]f32,
+    f32x3: [3]f32,
+    f32x4: [4]f32,
+    /// Warning about managing memory and stuff
+    f32s: []const f32,
+    bool: bool,
+    mat4: Mat4,
+    texture: TextureHandle,
+};
+
+pub const Attribute = enum(c_uint) {
     none = c.KINC_G4_VERTEX_DATA_NONE,
     /// equivalent to GLSL float
     f32 = c.KINC_G4_VERTEX_DATA_F32_1X,
@@ -62,13 +102,19 @@ pub const VertexAttribute = enum(c_uint) {
     u32x4 = c.KINC_G4_VERTEX_DATA_U32_4X,
 };
 
-pub const NamedVertexAttribute = struct {
+pub const NamedAttribute = struct {
     name: [:0]const u8,
-    type: VertexAttribute,
+    type: Attribute,
+};
+
+pub const NamedUniformTag = struct {
+    tag: UniformTag,
+    name: [:0]const u8,
 };
 
 pub const PipelineArgs = struct {
-    attributes: []const NamedVertexAttribute,
+    attributes: []const NamedAttribute,
+    uniforms: []const NamedUniformTag,
 };
 
 pub const MeshHandle = struct {
@@ -168,6 +214,11 @@ pub const ZRenderSystem = struct {
     }
 
     pub fn deinit(this: *@This()) void {
+        for (0..this.pipelines.items.len) |i| {
+            if (this.pipelines.items[i] != null) {
+                this.deinitPipeline(i);
+            }
+        }
         this.pipelines.deinit();
         this.pipelineSpots.deinit();
         this.meshes.deinit();
@@ -235,7 +286,7 @@ pub const ZRenderSystem = struct {
             if (this.meshes.items.len > 0) {
                 break :blk this.meshSpots.pop();
             } else {
-                const temp = this.textures.items.len;
+                const temp = this.meshes.items.len;
                 _ = try this.meshes.addOne();
                 break :blk temp;
             }
@@ -312,12 +363,27 @@ pub const ZRenderSystem = struct {
         pipeline.pipeline.input_layout[1] = null;
         pipeline.pipeline.depth_mode = c.KINC_G4_COMPARE_GREATER;
         c.kinc_g4_pipeline_compile(&pipeline.pipeline);
-        // TODO: custom uniforms
-        pipeline.textureUnit = c.kinc_g4_pipeline_get_texture_unit(&pipeline.pipeline, "tex");
-        pipeline.transformLocation = c.kinc_g4_pipeline_get_constant_location(&pipeline.pipeline, "transform");
-
+        // allocate data for pipeline variables
+        pipeline.uniformTags = try this.allocator.alloc(UniformTag, args.uniforms.len);
+        pipeline.uniformLocations = try this.allocator.alloc(Location, args.uniforms.len);
+        for (args.uniforms, 0..) |*uniform, i| {
+            pipeline.uniformTags[i] = uniform.tag;
+            if (uniform.tag == .texture) {
+                pipeline.uniformLocations[i] = .{ .texture = c.kinc_g4_pipeline_get_texture_unit(&pipeline.pipeline, uniform.name.ptr) };
+            } else {
+                pipeline.uniformLocations[i] = .{ .uniform = c.kinc_g4_pipeline_get_constant_location(&pipeline.pipeline, uniform.name.ptr) };
+            }
+        }
         this.pipelines.items[rawHandle] = pipeline;
         return rawHandle;
+    }
+
+    pub fn deinitPipeline(this: *@This(), handle: PipelineHandle) void {
+        const pipeline = &this.pipelines.items[handle].?;
+        this.allocator.free(pipeline.uniformLocations);
+        this.allocator.free(pipeline.uniformTags);
+        c.kinc_g4_pipeline_destroy(&pipeline.pipeline);
+        this.pipelines.items[handle] = null;
     }
 
     // The rest of the API is basically a bunch of wrappers over Kinc functions
@@ -523,7 +589,7 @@ pub const ZRenderSystem = struct {
         // Draw everything in the global registry
         const view = registries.globalEcsRegistry.basicView(RenderComponent);
         for (view.raw()) |*object| {
-            this.drawItem(object);
+            this.drawItem(object) catch unreachable;
         }
         // And everything in all of the local registries
         for (registries.localEcsRegistry.items) |*localEcsRegistryOrNone| {
@@ -531,7 +597,7 @@ pub const ZRenderSystem = struct {
             const localEcsRegistry = &localEcsRegistryOrNone.*.?;
             const localView = localEcsRegistry.basicView(RenderComponent);
             for (localView.raw()) |*object| {
-                this.drawItem(object);
+                this.drawItem(object) catch unreachable;
             }
         }
 
@@ -539,20 +605,13 @@ pub const ZRenderSystem = struct {
         _ = c.kinc_g4_swap_buffers();
     }
 
-    fn drawItem(this: *@This(), object: *RenderComponent) void {
+    fn drawItem(this: *@This(), object: *RenderComponent) !void {
         const pipelineOrNone = &this.pipelines.items[object.pipeline];
         if (pipelineOrNone.* == null) {
             std.debug.print("Invalid pipeline recieved! Skipping object.", .{});
             return;
         }
         const pipeline = &pipelineOrNone.*.?;
-
-        const textureOrNone = &this.textures.items[object.texture];
-        if (textureOrNone.* == null) {
-            std.debug.print("Invalid texture recieved! Skipping object.", .{});
-            return;
-        }
-        const texture = &textureOrNone.*.?;
 
         const meshOrNone = &this.meshes.items[object.mesh.rawHandle];
         if (meshOrNone.* == null) {
@@ -561,10 +620,61 @@ pub const ZRenderSystem = struct {
         }
         const mesh = &meshOrNone.*.?;
 
-        var transform = mat4ToKinc(object.transform);
         c.kinc_g4_set_pipeline(&pipeline.pipeline);
-        c.kinc_g4_set_matrix4(pipeline.transformLocation, &transform);
-        c.kinc_g4_set_texture(pipeline.textureUnit, &texture.texture);
+        for (object.uniforms, 0..) |uniform, i| {
+            const location = pipeline.uniformLocations[i];
+            switch (uniform) {
+                .i32 => |v| {
+                    c.kinc_g4_set_int(location.uniform, v);
+                },
+                .i32x2 => |v| {
+                    c.kinc_g4_set_int2(location.uniform, v[0], v[1]);
+                },
+                .i32x3 => |v| {
+                    c.kinc_g4_set_int3(location.uniform, v[0], v[1], v[2]);
+                },
+                .i32x4 => |v| {
+                    c.kinc_g4_set_int4(location.uniform, v[0], v[1], v[2], v[3]);
+                },
+                .i32s => |v| {
+                    if (comptime @sizeOf(c_int) == @sizeOf(i32)) {
+                        c.kinc_g4_set_ints(location.uniform, @constCast(@ptrCast(v.ptr)), @intCast(v.len));
+                    } else {
+                        // TODO
+                        @compileError("TODO - conversion between i32 and c_int not implemented");
+                    }
+                },
+                .f32 => |v| {
+                    c.kinc_g4_set_float(location.uniform, v);
+                },
+                .f32x2 => |v| {
+                    c.kinc_g4_set_float2(location.uniform, v[0], v[1]);
+                },
+                .f32x3 => |v| {
+                    c.kinc_g4_set_float3(location.uniform, v[0], v[1], v[2]);
+                },
+                .f32x4 => |v| {
+                    c.kinc_g4_set_float4(location.uniform, v[0], v[1], v[2], v[3]);
+                },
+                .f32s => |v| {
+                    c.kinc_g4_set_floats(location.uniform, @constCast(v.ptr), @intCast(v.len));
+                },
+                .bool => |v| {
+                    c.kinc_g4_set_bool(location.uniform, v);
+                },
+                .mat4 => |v| {
+                    var matrix = mat4ToKinc(v);
+                    c.kinc_g4_set_matrix4(location.uniform, &matrix);
+                },
+                .texture => |v| {
+                    const textureOrNone = this.textures.items[v];
+                    // TODO: something more useful
+                    if (textureOrNone == null) @panic("Yolo this texture is Broko");
+                    var texture = textureOrNone.?;
+                    c.kinc_g4_set_texture(location.texture, &texture.texture);
+                },
+            }
+        }
         c.kinc_g4_set_vertex_buffer(&mesh.vertices);
         c.kinc_g4_set_index_buffer(&mesh.indices);
         c.kinc_g4_draw_indexed_vertices();
@@ -701,8 +811,15 @@ const Pipeline = struct {
     pipeline: c.kinc_g4_pipeline,
     // pipeline has a reference to structure, so it needs to be stored in a place where its lifetime fully encompasses pipeline's.
     structure: c.kinc_g4_vertex_structure,
-    textureUnit: c.kinc_g4_texture_unit,
-    transformLocation: c.kinc_g4_constant_location,
+    /// allocated with the ZrenderSystems heap allocator, lifetime matches Pipeline's
+    uniformTags: []UniformTag,
+    /// allocated with the ZrenderSystems heap allocator, lifetime matches Pipeline's
+    uniformLocations: []Location,
+};
+
+const Location = union {
+    texture: c.kinc_g4_texture_unit,
+    uniform: c.kinc_g4_constant_location,
 };
 
 const KeyCode = enum(u32) {
