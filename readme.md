@@ -16,3 +16,12 @@ You're on your own in this regard. [zlm](https://github.com/ziglibs/zlm) is a go
 
 ## Examples
 For examples, see [ZEngineExamples](https://github.com/bluesillybeard/ZEngineExamples).
+
+## TODO
+- Get cross-compilation working
+- compiling shaders at runtime?
+- look into ditching Kinc and writing a custom Vulkan renderer
+    - Look porting libs:
+        - MoltenVK (Metal)
+        - Ashes (DX9-DX11 and OpenGL)
+        - Microsoft Dozen (DX12)
