@@ -201,7 +201,9 @@ pub const ZRenderSystem = struct {
         };
     }
 
-    pub fn systemInitGlobal(this: *@This(), registries: *zengine.RegistrySet) !void {
+    pub fn systemInitGlobal(this: *@This(), registries: *zengine.RegistrySet, settings: anytype) !void {
+        // TODO: settings
+        _ = settings;
         try this.initZRender(registries);
     }
 
