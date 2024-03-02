@@ -394,6 +394,16 @@ pub const ZRenderSystem = struct {
         c.kinc_start();
     }
 
+    pub fn getWindowResolution(this: *@This()) struct { width: u32, height: u32 } {
+        _ = this;
+        const width = c.kinc_width();
+        const height = c.kinc_height();
+        return .{
+            .width = @intCast(width),
+            .height = @intCast(height),
+        };
+    }
+
     fn mouse_enter_window(window: c_int, data: ?*anyopaque) callconv(.C) void {
         _ = window;
         const registries = r(data);
