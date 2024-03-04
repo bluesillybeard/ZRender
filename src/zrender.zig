@@ -19,6 +19,7 @@ pub const RenderComponent = struct {
     pipeline: PipelineHandle,
     // Uniforms are index-matched with the pipeline's uniform arguments.
     // Using a uniform of the wrong type is undefined behavior
+    // TODO: a pointer is a bad idea, instead use something inline
     uniforms: []Uniform,
 };
 
@@ -363,7 +364,7 @@ pub const ZRenderSystem = struct {
         pipeline.pipeline.fragment_shader = &fragmentShader;
         pipeline.pipeline.input_layout[0] = &pipeline.structure;
         pipeline.pipeline.input_layout[1] = null;
-        pipeline.pipeline.depth_mode = c.KINC_G4_COMPARE_GREATER;
+        pipeline.pipeline.depth_mode = c.KINC_G4_COMPARE_GREATER_EQUAL;
         pipeline.pipeline.depth_write = true;
         c.kinc_g4_pipeline_compile(&pipeline.pipeline);
         // allocate data for pipeline variables
