@@ -364,6 +364,7 @@ pub const ZRenderSystem = struct {
         pipeline.pipeline.input_layout[0] = &pipeline.structure;
         pipeline.pipeline.input_layout[1] = null;
         pipeline.pipeline.depth_mode = c.KINC_G4_COMPARE_GREATER;
+        pipeline.pipeline.depth_write = true;
         c.kinc_g4_pipeline_compile(&pipeline.pipeline);
         // allocate data for pipeline variables
         pipeline.uniformTags = try this.allocator.alloc(UniformTag, args.uniforms.len);
