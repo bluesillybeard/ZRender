@@ -614,7 +614,7 @@ pub const ZRenderSystem = struct {
                 this.drawItem(object) catch unreachable;
             }
         }
-
+        this.lastFrameTime = realTime;
         c.kinc_g4_end(0);
         _ = c.kinc_g4_swap_buffers();
     }
