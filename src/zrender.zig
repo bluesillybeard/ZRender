@@ -203,9 +203,7 @@ pub const ZRenderSystem = struct {
     }
 
     pub fn systemInitGlobal(this: *@This(), registries: *zengine.RegistrySet, settings: anytype) !void {
-        // TODO: settings
-        _ = settings;
-        try this.initZRender(registries);
+        try this.initZRender(registries, settings);
     }
 
     pub fn systemDeinitGlobal(this: *@This(), registries: *zengine.RegistrySet) void {
@@ -241,9 +239,10 @@ pub const ZRenderSystem = struct {
         this.onType.deinit();
     }
 
-    fn initZRender(this: *@This(), registries: *zengine.RegistrySet) !void {
+    fn initZRender(this: *@This(), registries: *zengine.RegistrySet, settings: anytype) !void {
         _ = this;
-        _ = c.kinc_init("ZRender", 1024, 768, null, null);
+        const title = comptime if(@hasField(@TypeOf(settings), "zrender_title")) settings.zrender_title else @compileError("Missing setting \"zrender_title\"");
+        _ = c.kinc_init(title, 1024, 768, null, null);
         c.kinc_set_update_callback(&update, registries);
 
         c.kinc_mouse_set_enter_window_callback(&mouse_enter_window, registries);
