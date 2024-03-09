@@ -2,7 +2,8 @@ const std = @import("std");
 const zengine = @import("zengine");
 const ecs = @import("ecs");
 
-const c = @cImport({
+// this is public. this is very very bad. I can't wait for this jam to be over so I can just finish my engine before making more games
+pub const kinc = @cImport({
     @cInclude("kinc/graphics4/graphics.h");
     @cInclude("kinc/graphics4/indexbuffer.h");
     @cInclude("kinc/graphics4/pipeline.h");
@@ -12,6 +13,7 @@ const c = @cImport({
     @cInclude("kinc/system.h");
     @cInclude("kinc/input/keyboard.h");
     @cInclude("kinc/input/mouse.h");
+    @cInclude("kinc/audio2/audio.h");
 });
 
 pub const RenderComponent = struct {
@@ -58,49 +60,49 @@ pub const Uniform = union(UniformTag) {
 };
 
 pub const Attribute = enum(c_uint) {
-    none = c.KINC_G4_VERTEX_DATA_NONE,
+    none = kinc.KINC_G4_VERTEX_DATA_NONE,
     /// equivalent to GLSL float
-    f32 = c.KINC_G4_VERTEX_DATA_F32_1X,
+    f32 = kinc.KINC_G4_VERTEX_DATA_F32_1X,
     /// equivalent to GLSL vec2
-    f32x2 = c.KINC_G4_VERTEX_DATA_F32_2X,
+    f32x2 = kinc.KINC_G4_VERTEX_DATA_F32_2X,
     /// equivalent to GLSL vec3
-    f32x3 = c.KINC_G4_VERTEX_DATA_F32_3X,
+    f32x3 = kinc.KINC_G4_VERTEX_DATA_F32_3X,
     /// equivalent to GLSL vec4
-    f32x4 = c.KINC_G4_VERTEX_DATA_F32_4X,
+    f32x4 = kinc.KINC_G4_VERTEX_DATA_F32_4X,
     /// equivalent to GLSL mat4
-    f32x4x4 = c.KINC_G4_VERTEX_DATA_F32_4X4,
-    i8 = c.KINC_G4_VERTEX_DATA_I8_1X,
-    u8 = c.KINC_G4_VERTEX_DATA_U8_1X,
-    i8normalized = c.KINC_G4_VERTEX_DATA_I8_1X_NORMALIZED,
-    u8normalized = c.KINC_G4_VERTEX_DATA_U8_1X_NORMALIZED,
-    i8x2 = c.KINC_G4_VERTEX_DATA_I8_2X,
-    u8x2 = c.KINC_G4_VERTEX_DATA_U8_2X,
-    i8x2normalized = c.KINC_G4_VERTEX_DATA_I8_2X_NORMALIZED,
-    u8x2normalized = c.KINC_G4_VERTEX_DATA_U8_2X_NORMALIZED,
-    i8x4 = c.KINC_G4_VERTEX_DATA_I8_4X,
-    u8x4 = c.KINC_G4_VERTEX_DATA_U8_4X,
-    i8x4normalized = c.KINC_G4_VERTEX_DATA_I8_4X_NORMALIZED,
-    u8x4normalized = c.KINC_G4_VERTEX_DATA_U8_4X_NORMALIZED,
-    i16 = c.KINC_G4_VERTEX_DATA_I16_1X,
-    u16 = c.KINC_G4_VERTEX_DATA_U16_1X,
-    i16normalized = c.KINC_G4_VERTEX_DATA_I16_1X_NORMALIZED,
-    u16normalized = c.KINC_G4_VERTEX_DATA_U16_1X_NORMALIZED,
-    i16x2 = c.KINC_G4_VERTEX_DATA_I16_2X,
-    u16x2 = c.KINC_G4_VERTEX_DATA_U16_2X,
-    i16x2normalized = c.KINC_G4_VERTEX_DATA_I16_2X_NORMALIZED,
-    u16x2normalized = c.KINC_G4_VERTEX_DATA_U16_2X_NORMALIZED,
-    i16x4 = c.KINC_G4_VERTEX_DATA_I16_4X,
-    u16x4 = c.KINC_G4_VERTEX_DATA_U16_4X,
-    i16x4normalized = c.KINC_G4_VERTEX_DATA_I16_4X_NORMALIZED,
-    u16x4normalized = c.KINC_G4_VERTEX_DATA_U16_4X_NORMALIZED,
-    i32 = c.KINC_G4_VERTEX_DATA_I32_1X,
-    u32 = c.KINC_G4_VERTEX_DATA_U32_1X,
-    i32x2 = c.KINC_G4_VERTEX_DATA_I32_2X,
-    u32x2 = c.KINC_G4_VERTEX_DATA_U32_2X,
-    i32x3 = c.KINC_G4_VERTEX_DATA_I32_3X,
-    u32x3 = c.KINC_G4_VERTEX_DATA_U32_3X,
-    i32x4 = c.KINC_G4_VERTEX_DATA_I32_4X,
-    u32x4 = c.KINC_G4_VERTEX_DATA_U32_4X,
+    f32x4x4 = kinc.KINC_G4_VERTEX_DATA_F32_4X4,
+    i8 = kinc.KINC_G4_VERTEX_DATA_I8_1X,
+    u8 = kinc.KINC_G4_VERTEX_DATA_U8_1X,
+    i8normalized = kinc.KINC_G4_VERTEX_DATA_I8_1X_NORMALIZED,
+    u8normalized = kinc.KINC_G4_VERTEX_DATA_U8_1X_NORMALIZED,
+    i8x2 = kinc.KINC_G4_VERTEX_DATA_I8_2X,
+    u8x2 = kinc.KINC_G4_VERTEX_DATA_U8_2X,
+    i8x2normalized = kinc.KINC_G4_VERTEX_DATA_I8_2X_NORMALIZED,
+    u8x2normalized = kinc.KINC_G4_VERTEX_DATA_U8_2X_NORMALIZED,
+    i8x4 = kinc.KINC_G4_VERTEX_DATA_I8_4X,
+    u8x4 = kinc.KINC_G4_VERTEX_DATA_U8_4X,
+    i8x4normalized = kinc.KINC_G4_VERTEX_DATA_I8_4X_NORMALIZED,
+    u8x4normalized = kinc.KINC_G4_VERTEX_DATA_U8_4X_NORMALIZED,
+    i16 = kinc.KINC_G4_VERTEX_DATA_I16_1X,
+    u16 = kinc.KINC_G4_VERTEX_DATA_U16_1X,
+    i16normalized = kinc.KINC_G4_VERTEX_DATA_I16_1X_NORMALIZED,
+    u16normalized = kinc.KINC_G4_VERTEX_DATA_U16_1X_NORMALIZED,
+    i16x2 = kinc.KINC_G4_VERTEX_DATA_I16_2X,
+    u16x2 = kinc.KINC_G4_VERTEX_DATA_U16_2X,
+    i16x2normalized = kinc.KINC_G4_VERTEX_DATA_I16_2X_NORMALIZED,
+    u16x2normalized = kinc.KINC_G4_VERTEX_DATA_U16_2X_NORMALIZED,
+    i16x4 = kinc.KINC_G4_VERTEX_DATA_I16_4X,
+    u16x4 = kinc.KINC_G4_VERTEX_DATA_U16_4X,
+    i16x4normalized = kinc.KINC_G4_VERTEX_DATA_I16_4X_NORMALIZED,
+    u16x4normalized = kinc.KINC_G4_VERTEX_DATA_U16_4X_NORMALIZED,
+    i32 = kinc.KINC_G4_VERTEX_DATA_I32_1X,
+    u32 = kinc.KINC_G4_VERTEX_DATA_U32_1X,
+    i32x2 = kinc.KINC_G4_VERTEX_DATA_I32_2X,
+    u32x2 = kinc.KINC_G4_VERTEX_DATA_U32_2X,
+    i32x3 = kinc.KINC_G4_VERTEX_DATA_I32_3X,
+    u32x3 = kinc.KINC_G4_VERTEX_DATA_U32_3X,
+    i32x4 = kinc.KINC_G4_VERTEX_DATA_I32_4X,
+    u32x4 = kinc.KINC_G4_VERTEX_DATA_U32_4X,
 };
 
 pub const NamedAttribute = struct {
@@ -242,18 +244,18 @@ pub const ZRenderSystem = struct {
     fn initZRender(this: *@This(), registries: *zengine.RegistrySet, settings: anytype) !void {
         _ = this;
         const title = comptime if(@hasField(@TypeOf(settings), "zrender_title")) settings.zrender_title else @compileError("Missing setting \"zrender_title\"");
-        _ = c.kinc_init(title, 1024, 768, null, null);
-        c.kinc_set_update_callback(&update, registries);
+        _ = kinc.kinc_init(title, 1024, 768, null, null);
+        kinc.kinc_set_update_callback(&update, registries);
 
-        c.kinc_mouse_set_enter_window_callback(&mouse_enter_window, registries);
-        c.kinc_mouse_set_leave_window_callback(&mouse_leave_window, registries);
-        c.kinc_mouse_set_press_callback(&mouse_press, registries);
-        c.kinc_mouse_set_release_callback(&mouse_release, registries);
-        c.kinc_mouse_set_move_callback(&mouse_move, registries);
-        c.kinc_mouse_set_scroll_callback(&mouse_scroll, registries);
-        c.kinc_keyboard_set_key_down_callback(&key_down, registries);
-        c.kinc_keyboard_set_key_up_callback(&key_up, registries);
-        c.kinc_keyboard_set_key_press_callback(&key_press, registries);
+        kinc.kinc_mouse_set_enter_window_callback(&mouse_enter_window, registries);
+        kinc.kinc_mouse_set_leave_window_callback(&mouse_leave_window, registries);
+        kinc.kinc_mouse_set_press_callback(&mouse_press, registries);
+        kinc.kinc_mouse_set_release_callback(&mouse_release, registries);
+        kinc.kinc_mouse_set_move_callback(&mouse_move, registries);
+        kinc.kinc_mouse_set_scroll_callback(&mouse_scroll, registries);
+        kinc.kinc_keyboard_set_key_down_callback(&key_down, registries);
+        kinc.kinc_keyboard_set_key_up_callback(&key_up, registries);
+        kinc.kinc_keyboard_set_key_press_callback(&key_press, registries);
     }
 
     pub fn loadTexture(this: *@This(), data: []const u8) !TextureHandle {
@@ -304,27 +306,27 @@ pub const ZRenderSystem = struct {
     pub fn mapMeshVertices(this: *@This(), Vertex: type, handle: MeshHandle, startVertex: usize, count: usize) []Vertex {
         var mesh = this.meshes.items[handle.rawHandle].?;
         var data: []Vertex = undefined;
-        data.ptr = @ptrCast(c.kinc_g4_vertex_buffer_lock(&mesh.vertices, @intCast(startVertex), @intCast(count)));
+        data.ptr = @ptrCast(kinc.kinc_g4_vertex_buffer_lock(&mesh.vertices, @intCast(startVertex), @intCast(count)));
         data.len = count;
         return data;
     }
 
     pub fn unmapMeshVertices(this: *@This(), Vertex: type, handle: MeshHandle, vertices: []Vertex) void {
         var mesh = this.meshes.items[handle.rawHandle].?;
-        c.kinc_g4_vertex_buffer_unlock(&mesh.vertices, @intCast(vertices.len));
+        kinc.kinc_g4_vertex_buffer_unlock(&mesh.vertices, @intCast(vertices.len));
     }
 
     pub fn mapMeshIndices(this: *@This(), handle: MeshHandle, startIndex: usize, count: usize) []u16 {
         var mesh = this.meshes.items[handle.rawHandle].?;
         var data: []u16 = undefined;
-        data.ptr = @alignCast(@ptrCast(c.kinc_g4_index_buffer_lock(&mesh.indices, @intCast(startIndex), @intCast(count))));
+        data.ptr = @alignCast(@ptrCast(kinc.kinc_g4_index_buffer_lock(&mesh.indices, @intCast(startIndex), @intCast(count))));
         data.len = count;
         return data;
     }
 
     pub fn unmapMeshIndices(this: *@This(), handle: MeshHandle, indices: []u16) void {
         var mesh = this.meshes.items[handle.rawHandle].?;
-        c.kinc_g4_index_buffer_unlock(&mesh.indices, @intCast(indices.len));
+        kinc.kinc_g4_index_buffer_unlock(&mesh.indices, @intCast(indices.len));
     }
 
     pub fn unloadMesh(this: *@This(), handle: MeshHandle) void {
@@ -347,34 +349,34 @@ pub const ZRenderSystem = struct {
             }
         };
         var pipeline: Pipeline = undefined;
-        var vertexShader: c.kinc_g4_shader = undefined;
-        var fragmentShader: c.kinc_g4_shader = undefined;
+        var vertexShader: kinc.kinc_g4_shader = undefined;
+        var fragmentShader: kinc.kinc_g4_shader = undefined;
 
-        c.kinc_g4_shader_init(&vertexShader, vertexShaderBinary.ptr, vertexShaderBinary.len, c.KINC_G4_SHADER_TYPE_VERTEX);
-        c.kinc_g4_shader_init(&fragmentShader, fragmentShaderBinary.ptr, fragmentShaderBinary.len, c.KINC_G4_SHADER_TYPE_FRAGMENT);
+        kinc.kinc_g4_shader_init(&vertexShader, vertexShaderBinary.ptr, vertexShaderBinary.len, kinc.KINC_G4_SHADER_TYPE_VERTEX);
+        kinc.kinc_g4_shader_init(&fragmentShader, fragmentShaderBinary.ptr, fragmentShaderBinary.len, kinc.KINC_G4_SHADER_TYPE_FRAGMENT);
 
-        c.kinc_g4_vertex_structure_init(&pipeline.structure);
+        kinc.kinc_g4_vertex_structure_init(&pipeline.structure);
         for (args.attributes) |attribute| {
             // The numbers for ZRender match Kinc for a reason
-            c.kinc_g4_vertex_structure_add(&pipeline.structure, attribute.name.ptr, @intFromEnum(attribute.type));
+            kinc.kinc_g4_vertex_structure_add(&pipeline.structure, attribute.name.ptr, @intFromEnum(attribute.type));
         }
-        c.kinc_g4_pipeline_init(&pipeline.pipeline);
+        kinc.kinc_g4_pipeline_init(&pipeline.pipeline);
         pipeline.pipeline.vertex_shader = &vertexShader;
         pipeline.pipeline.fragment_shader = &fragmentShader;
         pipeline.pipeline.input_layout[0] = &pipeline.structure;
         pipeline.pipeline.input_layout[1] = null;
-        pipeline.pipeline.depth_mode = c.KINC_G4_COMPARE_GREATER_EQUAL;
+        pipeline.pipeline.depth_mode = kinc.KINC_G4_COMPARE_GREATER_EQUAL;
         pipeline.pipeline.depth_write = true;
-        c.kinc_g4_pipeline_compile(&pipeline.pipeline);
+        kinc.kinc_g4_pipeline_compile(&pipeline.pipeline);
         // allocate data for pipeline variables
         pipeline.uniformTags = try this.allocator.alloc(UniformTag, args.uniforms.len);
         pipeline.uniformLocations = try this.allocator.alloc(Location, args.uniforms.len);
         for (args.uniforms, 0..) |*uniform, i| {
             pipeline.uniformTags[i] = uniform.tag;
             if (uniform.tag == .texture) {
-                pipeline.uniformLocations[i] = .{ .texture = c.kinc_g4_pipeline_get_texture_unit(&pipeline.pipeline, uniform.name.ptr) };
+                pipeline.uniformLocations[i] = .{ .texture = kinc.kinc_g4_pipeline_get_texture_unit(&pipeline.pipeline, uniform.name.ptr) };
             } else {
-                pipeline.uniformLocations[i] = .{ .uniform = c.kinc_g4_pipeline_get_constant_location(&pipeline.pipeline, uniform.name.ptr) };
+                pipeline.uniformLocations[i] = .{ .uniform = kinc.kinc_g4_pipeline_get_constant_location(&pipeline.pipeline, uniform.name.ptr) };
             }
         }
         this.pipelines.items[rawHandle] = pipeline;
@@ -385,20 +387,20 @@ pub const ZRenderSystem = struct {
         const pipeline = &this.pipelines.items[handle].?;
         this.allocator.free(pipeline.uniformLocations);
         this.allocator.free(pipeline.uniformTags);
-        c.kinc_g4_pipeline_destroy(&pipeline.pipeline);
+        kinc.kinc_g4_pipeline_destroy(&pipeline.pipeline);
         this.pipelines.items[handle] = null;
     }
 
     // The rest of the API is basically a bunch of wrappers over Kinc functions
     pub fn run(this: *@This()) void {
         _ = this;
-        c.kinc_start();
+        kinc.kinc_start();
     }
 
     pub fn getWindowResolution(this: *@This()) struct { width: u32, height: u32 } {
         _ = this;
-        const width = c.kinc_width();
-        const height = c.kinc_height();
+        const width = kinc.kinc_width();
+        const height = kinc.kinc_height();
         return .{
             .width = @intCast(width),
             .height = @intCast(height),
@@ -508,64 +510,64 @@ pub const ZRenderSystem = struct {
     }
 
     fn _loadTexture(this: *@This(), data: []const u8) !Texture {
-        var image = c.kinc_image{};
-        const memoryLen = c.kinc_image_size_from_encoded_bytes(@constCast(@ptrCast(data.ptr)), data.len, "png");
+        var image = kinc.kinc_image{};
+        const memoryLen = kinc.kinc_image_size_from_encoded_bytes(@constCast(@ptrCast(data.ptr)), data.len, "png");
         const memory: []u8 = try this.allocator.alloc(u8, memoryLen);
         defer this.allocator.free(memory);
-        _ = c.kinc_image_init_from_encoded_bytes(&image, memory.ptr, @constCast(@ptrCast(data.ptr)), data.len, "png");
-        var texture = c.kinc_g4_texture{};
-        c.kinc_g4_texture_init_from_image(&texture, &image);
+        _ = kinc.kinc_image_init_from_encoded_bytes(&image, memory.ptr, @constCast(@ptrCast(data.ptr)), data.len, "png");
+        var texture = kinc.kinc_g4_texture{};
+        kinc.kinc_g4_texture_init_from_image(&texture, &image);
         return Texture{
             .texture = texture,
         };
     }
 
     fn _unloadTexture(texture: Texture) void {
-        c.kinc_g4_texture_destroy(texture.texture);
+        kinc.kinc_g4_texture_destroy(texture.texture);
     }
 
     fn _loadMesh(this: *@This(), Vertex: type, vertices: []const Vertex, indices: []const u16, pipeline: *Pipeline) Mesh {
         _ = this;
         var mesh = Mesh{};
-        c.kinc_g4_vertex_buffer_init(&mesh.vertices, @intCast(vertices.len), &pipeline.structure, c.KINC_G4_USAGE_STATIC, 0);
-        const v: [*]Vertex = @ptrCast(c.kinc_g4_vertex_buffer_lock_all(&mesh.vertices));
+        kinc.kinc_g4_vertex_buffer_init(&mesh.vertices, @intCast(vertices.len), &pipeline.structure, kinc.KINC_G4_USAGE_STATIC, 0);
+        const v: [*]Vertex = @ptrCast(kinc.kinc_g4_vertex_buffer_lock_all(&mesh.vertices));
         @memcpy(v, vertices);
-        c.kinc_g4_vertex_buffer_unlock_all(&mesh.vertices);
+        kinc.kinc_g4_vertex_buffer_unlock_all(&mesh.vertices);
 
-        c.kinc_g4_index_buffer_init(&mesh.indices, @intCast(indices.len), c.KINC_G4_INDEX_BUFFER_FORMAT_16BIT, c.KINC_G4_USAGE_STATIC);
-        const i: [*]u16 = @alignCast(@ptrCast(c.kinc_g4_index_buffer_lock_all(&mesh.indices)));
+        kinc.kinc_g4_index_buffer_init(&mesh.indices, @intCast(indices.len), kinc.KINC_G4_INDEX_BUFFER_FORMAT_16BIT, kinc.KINC_G4_USAGE_STATIC);
+        const i: [*]u16 = @alignCast(@ptrCast(kinc.kinc_g4_index_buffer_lock_all(&mesh.indices)));
         @memcpy(i, indices);
-        c.kinc_g4_index_buffer_unlock_all(&mesh.indices);
+        kinc.kinc_g4_index_buffer_unlock_all(&mesh.indices);
         return mesh;
     }
 
     fn _unloadMesh(mesh: Mesh) void {
-        c.kinc_g4_vertex_buffer_destroy(mesh.vertices);
-        c.kinc_g4_index_buffer_destroy(mesh.indices);
+        kinc.kinc_g4_vertex_buffer_destroy(mesh.vertices);
+        kinc.kinc_g4_index_buffer_destroy(mesh.indices);
     }
 
-    fn mat4ToKinc(matrix: Mat4) c.kinc_matrix4x4 {
+    fn mat4ToKinc(matrix: Mat4) kinc.kinc_matrix4x4 {
         // TODO: see if this can be done more optimally
-        var m = c.kinc_matrix4x4{};
-        c.kinc_matrix4x4_set(&m, 0, 0, matrix.m00);
-        c.kinc_matrix4x4_set(&m, 0, 1, matrix.m01);
-        c.kinc_matrix4x4_set(&m, 0, 2, matrix.m02);
-        c.kinc_matrix4x4_set(&m, 0, 3, matrix.m03);
+        var m = kinc.kinc_matrix4x4{};
+        kinc.kinc_matrix4x4_set(&m, 0, 0, matrix.m00);
+        kinc.kinc_matrix4x4_set(&m, 0, 1, matrix.m01);
+        kinc.kinc_matrix4x4_set(&m, 0, 2, matrix.m02);
+        kinc.kinc_matrix4x4_set(&m, 0, 3, matrix.m03);
 
-        c.kinc_matrix4x4_set(&m, 1, 0, matrix.m10);
-        c.kinc_matrix4x4_set(&m, 1, 1, matrix.m11);
-        c.kinc_matrix4x4_set(&m, 1, 2, matrix.m12);
-        c.kinc_matrix4x4_set(&m, 1, 3, matrix.m13);
+        kinc.kinc_matrix4x4_set(&m, 1, 0, matrix.m10);
+        kinc.kinc_matrix4x4_set(&m, 1, 1, matrix.m11);
+        kinc.kinc_matrix4x4_set(&m, 1, 2, matrix.m12);
+        kinc.kinc_matrix4x4_set(&m, 1, 3, matrix.m13);
 
-        c.kinc_matrix4x4_set(&m, 2, 0, matrix.m20);
-        c.kinc_matrix4x4_set(&m, 2, 1, matrix.m21);
-        c.kinc_matrix4x4_set(&m, 2, 2, matrix.m22);
-        c.kinc_matrix4x4_set(&m, 2, 3, matrix.m23);
+        kinc.kinc_matrix4x4_set(&m, 2, 0, matrix.m20);
+        kinc.kinc_matrix4x4_set(&m, 2, 1, matrix.m21);
+        kinc.kinc_matrix4x4_set(&m, 2, 2, matrix.m22);
+        kinc.kinc_matrix4x4_set(&m, 2, 3, matrix.m23);
 
-        c.kinc_matrix4x4_set(&m, 3, 0, matrix.m30);
-        c.kinc_matrix4x4_set(&m, 3, 1, matrix.m31);
-        c.kinc_matrix4x4_set(&m, 3, 2, matrix.m32);
-        c.kinc_matrix4x4_set(&m, 3, 3, matrix.m33);
+        kinc.kinc_matrix4x4_set(&m, 3, 0, matrix.m30);
+        kinc.kinc_matrix4x4_set(&m, 3, 1, matrix.m31);
+        kinc.kinc_matrix4x4_set(&m, 3, 2, matrix.m32);
+        kinc.kinc_matrix4x4_set(&m, 3, 3, matrix.m33);
         return m;
     }
 
@@ -597,8 +599,8 @@ pub const ZRenderSystem = struct {
             });
         }
 
-        c.kinc_g4_begin(0);
-        c.kinc_g4_clear(c.KINC_G4_CLEAR_COLOR | c.KINC_G4_CLEAR_DEPTH, 0, 0.0, 0);
+        kinc.kinc_g4_begin(0);
+        kinc.kinc_g4_clear(kinc.KINC_G4_CLEAR_COLOR | kinc.KINC_G4_CLEAR_DEPTH, 0, 0.0, 0);
         // Draw everything in the global registry
         const view = registries.globalEcsRegistry.basicView(RenderComponent);
         for (view.raw()) |*object| {
@@ -614,8 +616,8 @@ pub const ZRenderSystem = struct {
             }
         }
         this.lastFrameTime = realTime;
-        c.kinc_g4_end(0);
-        _ = c.kinc_g4_swap_buffers();
+        kinc.kinc_g4_end(0);
+        _ = kinc.kinc_g4_swap_buffers();
     }
 
     fn drawItem(this: *@This(), object: *RenderComponent) !void {
@@ -633,64 +635,64 @@ pub const ZRenderSystem = struct {
         }
         const mesh = &meshOrNone.*.?;
 
-        c.kinc_g4_set_pipeline(&pipeline.pipeline);
+        kinc.kinc_g4_set_pipeline(&pipeline.pipeline);
         for (object.uniforms, 0..) |uniform, i| {
             const location = pipeline.uniformLocations[i];
             switch (uniform) {
                 .i32 => |v| {
-                    c.kinc_g4_set_int(location.uniform, v);
+                    kinc.kinc_g4_set_int(location.uniform, v);
                 },
                 .i32x2 => |v| {
-                    c.kinc_g4_set_int2(location.uniform, v[0], v[1]);
+                    kinc.kinc_g4_set_int2(location.uniform, v[0], v[1]);
                 },
                 .i32x3 => |v| {
-                    c.kinc_g4_set_int3(location.uniform, v[0], v[1], v[2]);
+                    kinc.kinc_g4_set_int3(location.uniform, v[0], v[1], v[2]);
                 },
                 .i32x4 => |v| {
-                    c.kinc_g4_set_int4(location.uniform, v[0], v[1], v[2], v[3]);
+                    kinc.kinc_g4_set_int4(location.uniform, v[0], v[1], v[2], v[3]);
                 },
                 .i32s => |v| {
                     if (comptime @sizeOf(c_int) == @sizeOf(i32)) {
-                        c.kinc_g4_set_ints(location.uniform, @constCast(@ptrCast(v.ptr)), @intCast(v.len));
+                        kinc.kinc_g4_set_ints(location.uniform, @constCast(@ptrCast(v.ptr)), @intCast(v.len));
                     } else {
                         // TODO
                         @compileError("TODO - conversion between i32 and c_int not implemented");
                     }
                 },
                 .f32 => |v| {
-                    c.kinc_g4_set_float(location.uniform, v);
+                    kinc.kinc_g4_set_float(location.uniform, v);
                 },
                 .f32x2 => |v| {
-                    c.kinc_g4_set_float2(location.uniform, v[0], v[1]);
+                    kinc.kinc_g4_set_float2(location.uniform, v[0], v[1]);
                 },
                 .f32x3 => |v| {
-                    c.kinc_g4_set_float3(location.uniform, v[0], v[1], v[2]);
+                    kinc.kinc_g4_set_float3(location.uniform, v[0], v[1], v[2]);
                 },
                 .f32x4 => |v| {
-                    c.kinc_g4_set_float4(location.uniform, v[0], v[1], v[2], v[3]);
+                    kinc.kinc_g4_set_float4(location.uniform, v[0], v[1], v[2], v[3]);
                 },
                 .f32s => |v| {
-                    c.kinc_g4_set_floats(location.uniform, @constCast(v.ptr), @intCast(v.len));
+                    kinc.kinc_g4_set_floats(location.uniform, @constCast(v.ptr), @intCast(v.len));
                 },
                 .bool => |v| {
-                    c.kinc_g4_set_bool(location.uniform, v);
+                    kinc.kinc_g4_set_bool(location.uniform, v);
                 },
                 .mat4 => |v| {
                     var matrix = mat4ToKinc(v);
-                    c.kinc_g4_set_matrix4(location.uniform, &matrix);
+                    kinc.kinc_g4_set_matrix4(location.uniform, &matrix);
                 },
                 .texture => |v| {
                     const textureOrNone = this.textures.items[v];
                     // TODO: something more useful
                     if (textureOrNone == null) @panic("Yolo this texture is Broko");
                     var texture = textureOrNone.?;
-                    c.kinc_g4_set_texture(location.texture, &texture.texture);
+                    kinc.kinc_g4_set_texture(location.texture, &texture.texture);
                 },
             }
         }
-        c.kinc_g4_set_vertex_buffer(&mesh.vertices);
-        c.kinc_g4_set_index_buffer(&mesh.indices);
-        c.kinc_g4_draw_indexed_vertices();
+        kinc.kinc_g4_set_vertex_buffer(&mesh.vertices);
+        kinc.kinc_g4_set_index_buffer(&mesh.indices);
+        kinc.kinc_g4_draw_indexed_vertices();
     }
 
     inline fn r(data: ?*anyopaque) *zengine.RegistrySet {
@@ -812,18 +814,18 @@ pub const OnTypeEventArgs = struct {
 };
 
 const Mesh = struct {
-    indices: c.kinc_g4_index_buffer = .{},
-    vertices: c.kinc_g4_vertex_buffer = .{},
+    indices: kinc.kinc_g4_index_buffer = .{},
+    vertices: kinc.kinc_g4_vertex_buffer = .{},
 };
 
 const Texture = struct {
-    texture: c.kinc_g4_texture = .{},
+    texture: kinc.kinc_g4_texture = .{},
 };
 
 const Pipeline = struct {
-    pipeline: c.kinc_g4_pipeline,
+    pipeline: kinc.kinc_g4_pipeline,
     // pipeline has a reference to structure, so it needs to be stored in a place where its lifetime fully encompasses pipeline's.
-    structure: c.kinc_g4_vertex_structure,
+    structure: kinc.kinc_g4_vertex_structure,
     /// allocated with the ZrenderSystems heap allocator, lifetime matches Pipeline's
     uniformTags: []UniformTag,
     /// allocated with the ZrenderSystems heap allocator, lifetime matches Pipeline's
@@ -831,8 +833,8 @@ const Pipeline = struct {
 };
 
 const Location = union {
-    texture: c.kinc_g4_texture_unit,
-    uniform: c.kinc_g4_constant_location,
+    texture: kinc.kinc_g4_texture_unit,
+    uniform: kinc.kinc_g4_constant_location,
 };
 
 const KeyCode = enum(u32) {
