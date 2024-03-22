@@ -1,5 +1,7 @@
 # ZRender - Official rendering module for [ZEngine](https://github.com/bluesillybeard/ZEngine)
 
+THIS PROJECT IS ABANDONED. You can use any rendering library you want with ZEngine, so there really isn't reason for this to exist.
+
 Currently, it is extremely simple - a draw component is simply these things:
 - Handle to a 3D mesh
 - Handle to a shader pipeline
